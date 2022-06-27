@@ -45,19 +45,24 @@ pub const ScreenBuffer = struct {
     }
 };
 
-pub fn lineSegment(buffer: *ScreenBuffer, color: u32, x1: f64, y1: f64, x2: f64, y2: f64) void {
+pub fn lineSegmentSubPixel(
+    buffer: *ScreenBuffer,
+    color: u32,
+    p1: SubPixelScreenCoordinates,
+    p2: SubPixelScreenCoordinates,
+) void {
     // Non-optimal implementation - invisible segments are not culled.
 
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
     const length = @sqrt(dx * dx + dy * dy);
 
     var x: i32 = undefined;
     var y: i32 = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
-        x = @floatToInt(i32, x1 + dx * t / length);
-        y = @floatToInt(i32, y1 + dy * t / length);
+        x = @floatToInt(i32, p1.x + dx * t / length);
+        y = @floatToInt(i32, p1.y + dy * t / length);
         if (x < 0 or x >= buffer.width or y < 0 or y >= buffer.height) continue;
         buffer.pixels[@intCast(u32, y) * buffer.width + @intCast(u32, x)] = color;
     }

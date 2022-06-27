@@ -102,3 +102,15 @@ pub fn filledCircle(buffer: *ScreenBuffer, color: u32, x0: i64, y0: i64, r: u32)
         while (x < xmax) : (x += 1) buffer.pixels[row_start + x] = color;
     }
 }
+
+pub fn triangleSubPixel(
+    buffer: *ScreenBuffer,
+    color: u32,
+    p1: SubPixelScreenCoordinates,
+    p2: SubPixelScreenCoordinates,
+    p3: SubPixelScreenCoordinates,
+) void {
+    lineSegmentSubPixel(buffer, color, p1, p2);
+    lineSegmentSubPixel(buffer, color, p2, p3);
+    lineSegmentSubPixel(buffer, color, p3, p1);
+}

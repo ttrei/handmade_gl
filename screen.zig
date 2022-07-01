@@ -114,3 +114,15 @@ pub fn triangleSubPixel(
     lineSegmentSubPixel(buffer, color, p2, p3);
     lineSegmentSubPixel(buffer, color, p3, p1);
 }
+
+pub fn polygonSubPixel(
+    buffer: *ScreenBuffer,
+    color: u32,
+    points: []const SubPixelScreenCoordinates,
+) void {
+    var idx2: usize = undefined;
+    for (points) |_, idx| {
+        idx2 = (idx + 1) % points.len;
+        lineSegmentSubPixel(buffer, color, points[idx], points[idx2]);
+    }
+}

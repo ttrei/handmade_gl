@@ -13,6 +13,13 @@ pub const ScreenCoordinates = struct {
 pub const SubPixelScreenCoordinates = struct {
     x: f64,
     y: f64,
+
+    pub fn fromPixel(c: *const ScreenCoordinates) SubPixelScreenCoordinates {
+        return SubPixelScreenCoordinates{
+            .x = @intToFloat(f64, c.x),
+            .y = @intToFloat(f64, c.y),
+        };
+    }
 };
 
 pub const ScreenBuffer = struct {
@@ -45,11 +52,25 @@ pub const ScreenBuffer = struct {
     }
 };
 
+pub fn lineSegment(
+    buffer: *ScreenBuffer,
+    color: u32,
+    p1: *const ScreenCoordinates,
+    p2: *const ScreenCoordinates,
+) void {
+    lineSegmentSubPixel(
+        buffer,
+        color,
+        &SubPixelScreenCoordinates.fromPixel(p1),
+        &SubPixelScreenCoordinates.fromPixel(p2),
+    );
+}
+
 pub fn lineSegmentSubPixel(
     buffer: *ScreenBuffer,
     color: u32,
-    p1: SubPixelScreenCoordinates,
-    p2: SubPixelScreenCoordinates,
+    p1: *const SubPixelScreenCoordinates,
+    p2: *const SubPixelScreenCoordinates,
 ) void {
     // Non-optimal implementation - invisible segments are not culled.
 
@@ -103,22 +124,46 @@ pub fn filledCircle(buffer: *ScreenBuffer, color: u32, x0: i64, y0: i64, r: u32)
     }
 }
 
+pub fn triangle(
+    buffer: *ScreenBuffer,
+    color: u32,
+    p1: *const ScreenCoordinates,
+    p2: *const ScreenCoordinates,
+    p3: *const ScreenCoordinates,
+) void {
+    lineSegment(buffer, color, p1, p2);
+    lineSegment(buffer, color, p2, p3);
+    lineSegment(buffer, color, p3, p1);
+}
+
 pub fn triangleSubPixel(
     buffer: *ScreenBuffer,
     color: u32,
-    p1: SubPixelScreenCoordinates,
-    p2: SubPixelScreenCoordinates,
-    p3: SubPixelScreenCoordinates,
+    p1: *const SubPixelScreenCoordinates,
+    p2: *const SubPixelScreenCoordinates,
+    p3: *const SubPixelScreenCoordinates,
 ) void {
     lineSegmentSubPixel(buffer, color, p1, p2);
     lineSegmentSubPixel(buffer, color, p2, p3);
     lineSegmentSubPixel(buffer, color, p3, p1);
 }
 
+pub fn polygon(
+    buffer: *ScreenBuffer,
+    color: u32,
+    points: []const *const ScreenCoordinates,
+) void {
+    var idx2: usize = undefined;
+    for (points) |_, idx| {
+        idx2 = (idx + 1) % points.len;
+        lineSegment(buffer, color, points[idx], points[idx2]);
+    }
+}
+
 pub fn polygonSubPixel(
     buffer: *ScreenBuffer,
     color: u32,
-    points: []const SubPixelScreenCoordinates,
+    points: []const *const SubPixelScreenCoordinates,
 ) void {
     var idx2: usize = undefined;
     for (points) |_, idx| {

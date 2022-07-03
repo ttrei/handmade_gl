@@ -2,12 +2,15 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
+const ScreenCoordinate = i32;
+const ScreenCoordinateSubPixel = f64;
+
 // Platform-independent ScreenBuffer of pixels + code for rendering geometry primitives.
 // Application code renders to the ScreenBuffer which is then displayed by platform code.
 
 pub const Point = struct {
-    x: i32,
-    y: i32,
+    x: ScreenCoordinate,
+    y: ScreenCoordinate,
 };
 
 pub const PointSubPixel = struct {
@@ -46,8 +49,8 @@ pub const ScreenBuffer = struct {
             color,
             0,
             0,
-            @intCast(i32, self.width),
-            @intCast(i32, self.height),
+            @intCast(ScreenCoordinate, self.width),
+            @intCast(ScreenCoordinate, self.height),
         );
     }
 };
@@ -78,18 +81,25 @@ pub fn lineSegmentSubPixel(
     const dy = p2.y - p1.y;
     const length = @sqrt(dx * dx + dy * dy);
 
-    var x: i32 = undefined;
-    var y: i32 = undefined;
+    var x: ScreenCoordinate = undefined;
+    var y: ScreenCoordinate = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
-        x = @floatToInt(i32, p1.x + dx * t / length);
-        y = @floatToInt(i32, p1.y + dy * t / length);
+        x = @floatToInt(ScreenCoordinate, p1.x + dx * t / length);
+        y = @floatToInt(ScreenCoordinate, p1.y + dy * t / length);
         if (x < 0 or x >= buffer.width or y < 0 or y >= buffer.height) continue;
         buffer.pixels[@intCast(u32, y) * buffer.width + @intCast(u32, x)] = color;
     }
 }
 
-pub fn filledRectangle(buffer: *ScreenBuffer, color: u32, left: i32, top: i32, right: i32, bottom: i32) void {
+pub fn filledRectangle(
+    buffer: *ScreenBuffer,
+    color: u32,
+    left: ScreenCoordinate,
+    top: ScreenCoordinate,
+    right: ScreenCoordinate,
+    bottom: ScreenCoordinate,
+) void {
     if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
     const clamped_left: u32 = if (left < 0) 0 else @intCast(u32, left);
     const clamped_top: u32 = if (top < 0) 0 else @intCast(u32, top);
@@ -106,21 +116,22 @@ pub fn filledRectangle(buffer: *ScreenBuffer, color: u32, left: i32, top: i32, r
     }
 }
 
-pub fn filledCircle(buffer: *ScreenBuffer, color: u32, x0: i64, y0: i64, r: u32) void {
-    if (x0 - r >= buffer.width or x0 + r <= 0 or y0 - r >= buffer.height or y0 + r <= 0) return;
-    const ymin = if (y0 - r < 0) 0 else @intCast(u32, y0 - r);
-    const ymax = if (y0 + r > buffer.height) buffer.height else @intCast(u32, y0 + r);
+pub fn filledCircle(buffer: *ScreenBuffer, color: u32, c: *const Point, r: u32) void {
+    const r_i32 = @intCast(i32, r);
+    if (c.x - r_i32 >= buffer.width or c.x + r_i32 <= 0 or c.y - r_i32 >= buffer.height or c.y + r_i32 <= 0) return;
+    const ymin = if (c.y - r_i32 < 0) 0 else c.y - r_i32;
+    const ymax = if (c.y + r_i32 > buffer.height) @intCast(ScreenCoordinate, buffer.height) else c.y + r_i32;
 
-    var y: u32 = ymin;
+    var y: ScreenCoordinate = ymin;
     while (y < ymax) : (y += 1) {
-        const dy = std.math.absCast(y0 - y);
+        const dy = std.math.absCast(c.y - y);
         const dx = std.math.sqrt(r * r - dy * dy);
-        if (x0 - dx >= buffer.width or x0 + dx <= 0) continue;
-        const xmin = if (x0 - dx < 0) 0 else @intCast(u32, x0 - dx);
-        const xmax = if (x0 + dx > buffer.width) buffer.width else @intCast(u32, x0 + dx);
-        const row_start = buffer.width * y;
-        var x: u32 = xmin;
-        while (x < xmax) : (x += 1) buffer.pixels[row_start + x] = color;
+        if (c.x - dx >= buffer.width or c.x + dx <= 0) continue;
+        const xmin = if (c.x - dx < 0) 0 else c.x - dx;
+        const xmax = if (c.x + dx > buffer.width) @intCast(ScreenCoordinate, buffer.width) else c.x + dx;
+        const row_start = buffer.width * @intCast(u32, y);
+        var x: ScreenCoordinate = xmin;
+        while (x < xmax) : (x += 1) buffer.pixels[row_start + @intCast(u32, x)] = color;
     }
 }
 

@@ -162,23 +162,23 @@ pub fn triangleSubPixel(
 pub fn polygon(
     buffer: *ScreenBuffer,
     color: u32,
-    points: []const *const Point,
+    points: []const Point,
 ) void {
     var idx2: usize = undefined;
     for (points) |_, idx| {
         idx2 = (idx + 1) % points.len;
-        lineSegment(buffer, color, points[idx], points[idx2]);
+        lineSegment(buffer, color, &points[idx], &points[idx2]);
     }
 }
 
 pub fn polygonSubPixel(
     buffer: *ScreenBuffer,
     color: u32,
-    points: []const *const PointSubPixel,
+    points: []const PointSubPixel,
 ) void {
     var idx2: usize = undefined;
     for (points) |_, idx| {
         idx2 = (idx + 1) % points.len;
-        lineSegmentSubPixel(buffer, color, points[idx], points[idx2]);
+        lineSegmentSubPixel(buffer, color, &points[idx], &points[idx2]);
     }
 }

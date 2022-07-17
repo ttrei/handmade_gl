@@ -61,6 +61,7 @@ pub const Polygon = struct {
     }
 
     pub fn draw(self: *const Self, buffer: *ScreenBuffer, color: u32) void {
+        if (self.n == 0) return;
         var i: usize = 0;
         var v = self.first;
         while (i < self.n) : (i += 1) {

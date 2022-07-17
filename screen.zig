@@ -1,4 +1,5 @@
 const std = @import("std");
+const geometry = @import("geometry.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -159,7 +160,18 @@ pub fn triangleSubPixel(
     lineSegmentSubPixel(buffer, color, p3, p1);
 }
 
-pub fn polygon(
+pub fn polygonToPoints(allocator: Allocator, poly: *const geometry.Polygon) ![]Point {
+    var buf = try allocator.alloc(Point, poly.n);
+    var i: usize = 0;
+    var v = poly.first;
+    while (i < poly.n) : (i += 1) {
+        buf[i] = Point{ .x = v.p.x, .y = v.p.y };
+        v = v.next;
+    }
+    return buf;
+}
+
+pub fn polygonFromPoints(
     buffer: *ScreenBuffer,
     color: u32,
     points: []const Point,
@@ -171,7 +183,7 @@ pub fn polygon(
     }
 }
 
-pub fn polygonSubPixel(
+pub fn polygonFromSubPixelPoints(
     buffer: *ScreenBuffer,
     color: u32,
     points: []const PointSubPixel,

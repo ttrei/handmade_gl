@@ -1,5 +1,4 @@
 const std = @import("std");
-const geometry = @import("geometry.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -146,51 +145,4 @@ pub fn triangle(
     lineSegment(buffer, color, p1, p2);
     lineSegment(buffer, color, p2, p3);
     lineSegment(buffer, color, p3, p1);
-}
-
-pub fn triangleSubPixel(
-    buffer: *ScreenBuffer,
-    color: u32,
-    p1: *const PointSubPixel,
-    p2: *const PointSubPixel,
-    p3: *const PointSubPixel,
-) void {
-    lineSegmentSubPixel(buffer, color, p1, p2);
-    lineSegmentSubPixel(buffer, color, p2, p3);
-    lineSegmentSubPixel(buffer, color, p3, p1);
-}
-
-pub fn polygonToPoints(allocator: Allocator, poly: *const geometry.Polygon) ![]Point {
-    var buf = try allocator.alloc(Point, poly.n);
-    var i: usize = 0;
-    var v = poly.first;
-    while (i < poly.n) : (i += 1) {
-        buf[i] = Point{ .x = v.p.x, .y = v.p.y };
-        v = v.next;
-    }
-    return buf;
-}
-
-pub fn polygonFromPoints(
-    buffer: *ScreenBuffer,
-    color: u32,
-    points: []const Point,
-) void {
-    var idx2: usize = undefined;
-    for (points) |_, idx| {
-        idx2 = (idx + 1) % points.len;
-        lineSegment(buffer, color, &points[idx], &points[idx2]);
-    }
-}
-
-pub fn polygonFromSubPixelPoints(
-    buffer: *ScreenBuffer,
-    color: u32,
-    points: []const PointSubPixel,
-) void {
-    var idx2: usize = undefined;
-    for (points) |_, idx| {
-        idx2 = (idx + 1) % points.len;
-        lineSegmentSubPixel(buffer, color, &points[idx], &points[idx2]);
-    }
 }

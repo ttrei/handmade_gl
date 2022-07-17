@@ -1,4 +1,7 @@
 const std = @import("std");
+const screen = @import("screen.zig");
+const ScreenBuffer = screen.ScreenBuffer;
+
 const Allocator = std.mem.Allocator;
 
 const CoordinateType = i32;
@@ -64,6 +67,20 @@ pub const Polygon = struct {
             sum += orientedArea2(&f.p, &a.p, &a.next.p);
         }
         return sum;
+    }
+
+    pub fn draw(self: *const Self, buffer: *ScreenBuffer, color: u32) void {
+        var i: usize = 0;
+        var v = self.first;
+        while (i < self.n) : (i += 1) {
+            screen.lineSegment(
+                buffer,
+                color,
+                &screen.Point{ .x = v.p.x, .y = v.p.y },
+                &screen.Point{ .x = v.next.p.x, .y = v.next.p.y },
+            );
+            v = v.next;
+        }
     }
 };
 

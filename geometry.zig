@@ -54,19 +54,19 @@ pub const Polygon = struct {
         }
         self.n += 1;
     }
+
+    pub fn area2(self: *const Self) i32 {
+        if (self.n < 3) return 0;
+        var sum: i32 = 0;
+        const f = self.first;
+        var a = f.next;
+        while (a.next != f) : (a = a.next) {
+            sum += orientedArea2(&f.p, &a.p, &a.next.p);
+        }
+        return sum;
+    }
 };
 
-pub fn area2(a: *const Point, b: *const Point, c: *const Point) i32 {
+pub fn orientedArea2(a: *const Point, b: *const Point, c: *const Point) i32 {
     return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
-}
-
-pub fn areaPoly2(polygon: *const Polygon) i32 {
-    if (polygon.n < 3) return 0;
-    var sum: i32 = 0;
-    const f = polygon.first;
-    var a = f.next;
-    while (a.next != f) : (a = a.next) {
-        sum += area2(&f.p, &a.p, &a.next.p);
-    }
-    return sum;
 }

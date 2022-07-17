@@ -15,13 +15,13 @@ pub const Point = struct {
 };
 
 pub const PointSubPixel = struct {
-    x: f64,
-    y: f64,
+    x: ScreenCoordinateSubPixel,
+    y: ScreenCoordinateSubPixel,
 
     pub fn fromPixel(c: *const Point) PointSubPixel {
         return PointSubPixel{
-            .x = @intToFloat(f64, c.x),
-            .y = @intToFloat(f64, c.y),
+            .x = @intToFloat(ScreenCoordinateSubPixel, c.x),
+            .y = @intToFloat(ScreenCoordinateSubPixel, c.y),
         };
     }
 };

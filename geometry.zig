@@ -1,5 +1,6 @@
 const std = @import("std");
 const screen = @import("screen.zig");
+const primitives = @import("primitives.zig");
 const ScreenBuffer = screen.ScreenBuffer;
 
 const Allocator = std.mem.Allocator;
@@ -38,20 +39,10 @@ pub const Polygon = struct {
         // TODO: Is it OK to call arena.allocator() each time?
         const v = try self.arena.allocator().create(Vertex);
         if (self.n == 0) {
-            v.* = .{
-                .p = p,
-                .ear = false,
-                .next = v,
-                .prev = v,
-            };
+            v.* = .{ .p = p, .ear = false, .next = v, .prev = v };
             self.first = v;
         } else {
-            v.* = .{
-                .p = p,
-                .ear = false,
-                .next = self.first,
-                .prev = self.first.prev,
-            };
+            v.* = .{ .p = p, .ear = false, .next = self.first, .prev = self.first.prev };
             self.first.prev = v;
             v.prev.next = v;
         }
@@ -73,12 +64,9 @@ pub const Polygon = struct {
         var i: usize = 0;
         var v = self.first;
         while (i < self.n) : (i += 1) {
-            screen.lineSegment(
-                buffer,
-                color,
-                &screen.Point{ .x = v.p.x, .y = v.p.y },
-                &screen.Point{ .x = v.next.p.x, .y = v.next.p.y },
-            );
+            const p1 = screen.Pixel{ .x = v.p.x, .y = v.p.y };
+            const p2 = screen.Pixel{ .x = v.next.p.x, .y = v.next.p.y };
+            primitives.lineSegment(buffer, color, &p1, &p2);
             v = v.next;
         }
     }
@@ -86,4 +74,11 @@ pub const Polygon = struct {
 
 pub fn orientedArea2(a: *const Point, b: *const Point, c: *const Point) i32 {
     return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+}
+
+pub fn scalePoint(p: Point, scale: f32) Point {
+    return Point{
+        .x = @floatToInt(i32, @intToFloat(f32, p.x) * scale),
+        .y = @floatToInt(i32, @intToFloat(f32, p.y) * scale),
+    };
 }

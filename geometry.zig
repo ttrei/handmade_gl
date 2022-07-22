@@ -37,6 +37,8 @@ pub const Polygon = struct {
 
     pub fn add_vertex(self: *Self, p: Point) !void {
         // TODO: Is it OK to call arena.allocator() each time?
+        // Is the following a better way to use arena allocator?
+        // https://github.com/michal-z/zig-gamedev/blob/cabaf63cdf7960723bb5b000468b648df294bc9e/samples/gui_test_wgpu/src/gui_test_wgpu.zig#L20
         const v = try self.arena.allocator().create(Vertex);
         if (self.n == 0) {
             v.* = .{ .p = p, .ear = false, .next = v, .prev = v };

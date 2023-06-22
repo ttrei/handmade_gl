@@ -81,7 +81,7 @@ pub fn orientedArea2(a: *const Point, b: *const Point, c: *const Point) i32 {
 
 pub fn scalePoint(p: Point, scale: f32) Point {
     return Point{
-        .x = @floatToInt(i32, @intToFloat(f32, p.x) * scale),
-        .y = @floatToInt(i32, @intToFloat(f32, p.y) * scale),
+        .x = @intFromFloat(i32, @floatFromInt(f32, p.x) * scale),
+        .y = @intFromFloat(i32, @floatFromInt(f32, p.y) * scale),
     };
 }

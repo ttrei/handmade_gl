@@ -37,8 +37,8 @@ pub fn lineSegmentSubPixel(
     var y: ScreenCoordinate = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
-        x = @floatToInt(ScreenCoordinate, p1.x + dx * t / length);
-        y = @floatToInt(ScreenCoordinate, p1.y + dy * t / length);
+        x = @intFromFloat(ScreenCoordinate, p1.x + dx * t / length);
+        y = @intFromFloat(ScreenCoordinate, p1.y + dy * t / length);
         if (x < 0 or x >= buffer.width or y < 0 or y >= buffer.height) continue;
         buffer.pixels[@intCast(u32, y) * buffer.width + @intCast(u32, x)] = color;
     }

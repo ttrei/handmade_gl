@@ -11,8 +11,8 @@ pub const Pixel = struct {
 
     pub fn fromSubPixel(p: *const SubPixel) Pixel {
         return Pixel{
-            .x = @floatToInt(ScreenCoordinate, p.x),
-            .y = @floatToInt(ScreenCoordinate, p.y),
+            .x = @intFromFloat(ScreenCoordinate, p.x),
+            .y = @intFromFloat(ScreenCoordinate, p.y),
         };
     }
 };
@@ -23,8 +23,8 @@ pub const SubPixel = struct {
 
     pub fn fromPixel(p: *const Pixel) SubPixel {
         return SubPixel{
-            .x = @intToFloat(ScreenCoordinateSubPixel, p.x),
-            .y = @intToFloat(ScreenCoordinateSubPixel, p.y),
+            .x = @floatFromInt(ScreenCoordinateSubPixel, p.x),
+            .y = @floatFromInt(ScreenCoordinateSubPixel, p.y),
         };
     }
 };

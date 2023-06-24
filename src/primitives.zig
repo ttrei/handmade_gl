@@ -1,6 +1,6 @@
 const std = @import("std");
 const screen = @import("screen.zig");
-const ScreenBuffer = screen.ScreenBuffer;
+const PixelBuffer = screen.PixelBuffer;
 
 const Pixel = screen.Pixel;
 const SubPixel = screen.SubPixel;
@@ -8,7 +8,7 @@ const ScreenCoordinate = screen.ScreenCoordinate;
 const ScreenCoordinateSubPixel = screen.ScreenCoordinateSubPixel;
 
 pub fn lineSegment(
-    buffer: *ScreenBuffer,
+    buffer: *PixelBuffer,
     color: u32,
     p1: *const Pixel,
     p2: *const Pixel,
@@ -22,7 +22,7 @@ pub fn lineSegment(
 }
 
 pub fn lineSegmentSubPixel(
-    buffer: *ScreenBuffer,
+    buffer: *PixelBuffer,
     color: u32,
     p1: *const SubPixel,
     p2: *const SubPixel,
@@ -33,19 +33,17 @@ pub fn lineSegmentSubPixel(
     const dy = p2.y - p1.y;
     const length = @sqrt(dx * dx + dy * dy);
 
-    var x: ScreenCoordinate = undefined;
-    var y: ScreenCoordinate = undefined;
+    var p: Pixel = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
-        x = @intFromFloat(ScreenCoordinate, p1.x + dx * t / length);
-        y = @intFromFloat(ScreenCoordinate, p1.y + dy * t / length);
-        if (x < 0 or x >= buffer.width or y < 0 or y >= buffer.height) continue;
-        buffer.pixels[@intCast(u32, y) * buffer.width + @intCast(u32, x)] = color;
+        p.x = @intFromFloat(ScreenCoordinate, p1.x + dx * t / length);
+        p.y = @intFromFloat(ScreenCoordinate, p1.y + dy * t / length);
+        buffer.pixels[buffer.pixelIdx(p.sub(buffer.origin)) orelse continue] = color;
     }
 }
 
 pub fn filledRectangle(
-    buffer: *ScreenBuffer,
+    buffer: *PixelBuffer,
     color: u32,
     left: ScreenCoordinate,
     top: ScreenCoordinate,
@@ -63,12 +61,13 @@ pub fn filledRectangle(
     while (y < height) : (y += 1) {
         const width = clamped_right - clamped_left;
         var x: u32 = 0;
+        // TODO Use pixelIdx()
         while (x < width) : (x += 1) buffer.pixels[row_start + x] = color;
         row_start += buffer.width;
     }
 }
 
-pub fn filledCircle(buffer: *ScreenBuffer, color: u32, c: *const Pixel, r: u32) void {
+pub fn filledCircle(buffer: *PixelBuffer, color: u32, c: *const Pixel, r: u32) void {
     const r_i32 = @intCast(i32, r);
     if (c.x - r_i32 >= buffer.width or c.x + r_i32 <= 0 or c.y - r_i32 >= buffer.height or c.y + r_i32 <= 0) return;
     const ymin = if (c.y - r_i32 < 0) 0 else c.y - r_i32;
@@ -83,6 +82,22 @@ pub fn filledCircle(buffer: *ScreenBuffer, color: u32, c: *const Pixel, r: u32) 
         const xmax = if (c.x + dx > buffer.width) @intCast(ScreenCoordinate, buffer.width) else c.x + dx;
         const row_start = buffer.width * @intCast(u32, y);
         var x: ScreenCoordinate = xmin;
+        // TODO Use pixelIdx()
         while (x < xmax) : (x += 1) buffer.pixels[row_start + @intCast(u32, x)] = color;
     }
+}
+
+test "line segment" {
+    const width = 800;
+    const height = 600;
+    const black = 0x000000ff;
+    const white = 0xffffffff;
+    const pixels = try std.testing.allocator.alloc(u32, width * height);
+    defer std.testing.allocator.free(pixels);
+    var buffer = try PixelBuffer.init(pixels, width, height);
+    buffer.clear(black);
+
+    lineSegment(&buffer, white, &.{ .x = 10, .y = 10 }, &.{ .x = 50, .y = 50 });
+    try std.testing.expect(buffer.pixels[buffer.pixelIdx(.{ .x = 9, .y = 9 }).?] == black);
+    try std.testing.expect(buffer.pixels[buffer.pixelIdx(.{ .x = 11, .y = 11 }).?] == white);
 }

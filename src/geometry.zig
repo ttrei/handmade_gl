@@ -1,7 +1,7 @@
 const std = @import("std");
 const screen = @import("screen.zig");
 const primitives = @import("primitives.zig");
-const ScreenBuffer = screen.ScreenBuffer;
+const PixelBuffer = screen.PixelBuffer;
 
 const Allocator = std.mem.Allocator;
 
@@ -62,7 +62,7 @@ pub const Polygon = struct {
         return sum;
     }
 
-    pub fn draw(self: *const Self, buffer: *ScreenBuffer, color: u32) void {
+    pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
         if (self.n == 0) return;
         var i: usize = 0;
         var v = self.first;

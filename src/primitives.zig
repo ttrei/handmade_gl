@@ -36,8 +36,8 @@ pub fn lineSegmentSubPixel(
     var p: Pixel = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
-        p.x = @intFromFloat(ScreenCoordinate, p1.x + dx * t / length);
-        p.y = @intFromFloat(ScreenCoordinate, p1.y + dy * t / length);
+        p.x = @as(ScreenCoordinate, @intFromFloat(p1.x + dx * t / length));
+        p.y = @as(ScreenCoordinate, @intFromFloat(p1.y + dy * t / length));
         buffer.pixels[buffer.pixelIdx(p.sub(buffer.origin)) orelse continue] = color;
     }
 }
@@ -51,10 +51,10 @@ pub fn filledRectangle(
     bottom: ScreenCoordinate,
 ) void {
     if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
-    const clamped_left: u32 = if (left < 0) 0 else @intCast(u32, left);
-    const clamped_top: u32 = if (top < 0) 0 else @intCast(u32, top);
-    const clamped_right: u32 = if (right > buffer.width) buffer.width else @intCast(u32, right);
-    const clamped_bottom: u32 = if (bottom > buffer.height) buffer.height else @intCast(u32, bottom);
+    const clamped_left: u32 = if (left < 0) 0 else @as(u32, @intCast(left));
+    const clamped_top: u32 = if (top < 0) 0 else @as(u32, @intCast(top));
+    const clamped_right: u32 = if (right > buffer.width) buffer.width else @as(u32, @intCast(right));
+    const clamped_bottom: u32 = if (bottom > buffer.height) buffer.height else @as(u32, @intCast(bottom));
     var row_start: u32 = buffer.width * clamped_top + clamped_left;
     var y: u32 = 0;
     const height = clamped_bottom - clamped_top;
@@ -68,10 +68,10 @@ pub fn filledRectangle(
 }
 
 pub fn filledCircle(buffer: *PixelBuffer, color: u32, c: *const Pixel, r: u32) void {
-    const r_i32 = @intCast(i32, r);
+    const r_i32 = @as(i32, @intCast(r));
     if (c.x - r_i32 >= buffer.width or c.x + r_i32 <= 0 or c.y - r_i32 >= buffer.height or c.y + r_i32 <= 0) return;
     const ymin = if (c.y - r_i32 < 0) 0 else c.y - r_i32;
-    const ymax = if (c.y + r_i32 > buffer.height) @intCast(ScreenCoordinate, buffer.height) else c.y + r_i32;
+    const ymax = if (c.y + r_i32 > buffer.height) @as(ScreenCoordinate, @intCast(buffer.height)) else c.y + r_i32;
 
     var y: ScreenCoordinate = ymin;
     while (y < ymax) : (y += 1) {
@@ -79,11 +79,11 @@ pub fn filledCircle(buffer: *PixelBuffer, color: u32, c: *const Pixel, r: u32) v
         const dx = std.math.sqrt(r * r - dy * dy);
         if (c.x - dx >= buffer.width or c.x + dx <= 0) continue;
         const xmin = if (c.x - dx < 0) 0 else c.x - dx;
-        const xmax = if (c.x + dx > buffer.width) @intCast(ScreenCoordinate, buffer.width) else c.x + dx;
-        const row_start = buffer.width * @intCast(u32, y);
+        const xmax = if (c.x + dx > buffer.width) @as(ScreenCoordinate, @intCast(buffer.width)) else c.x + dx;
+        const row_start = buffer.width * @as(u32, @intCast(y));
         var x: ScreenCoordinate = xmin;
         // TODO Use pixelIdx()
-        while (x < xmax) : (x += 1) buffer.pixels[row_start + @intCast(u32, x)] = color;
+        while (x < xmax) : (x += 1) buffer.pixels[row_start + @as(u32, @intCast(x))] = color;
     }
 }
 

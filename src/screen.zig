@@ -15,8 +15,8 @@ pub const Pixel = struct {
 
     pub fn fromSubPixel(p: *const SubPixel) Pixel {
         return Pixel{
-            .x = @intFromFloat(ScreenCoordinate, p.x),
-            .y = @intFromFloat(ScreenCoordinate, p.y),
+            .x = @as(ScreenCoordinate, @intFromFloat(p.x)),
+            .y = @as(ScreenCoordinate, @intFromFloat(p.y)),
         };
     }
 
@@ -34,8 +34,8 @@ pub const SubPixel = struct {
 
     pub fn fromPixel(p: *const Pixel) SubPixel {
         return SubPixel{
-            .x = @floatFromInt(ScreenCoordinateSubPixel, p.x),
-            .y = @floatFromInt(ScreenCoordinateSubPixel, p.y),
+            .x = @as(ScreenCoordinateSubPixel, @floatFromInt(p.x)),
+            .y = @as(ScreenCoordinateSubPixel, @floatFromInt(p.y)),
         };
     }
 };
@@ -77,8 +77,8 @@ pub const PixelBuffer = struct {
     }
 
     pub fn clear(self: *Self, color: u32) void {
-        const x_max = @min(self.origin.x + @intCast(i32, self.width), @intCast(i32, self.stride));
-        const y_max = @min(self.origin.y + @intCast(i32, self.height), @intCast(i32, self.pixels.len / self.stride));
+        const x_max = @min(self.origin.x + @as(i32, @intCast(self.width)), @as(i32, @intCast(self.stride)));
+        const y_max = @min(self.origin.y + @as(i32, @intCast(self.height)), @as(i32, @intCast(self.pixels.len / self.stride)));
         var y = @max(self.origin.y, 0);
         while (y < y_max) : (y += 1) {
             var x = @max(self.origin.x, 0);
@@ -98,7 +98,7 @@ pub const PixelBuffer = struct {
         const y_max = self.pixels.len / self.stride;
         // Outside of the total buffer
         if (x < 0 or y < 0 or x >= x_max or y >= y_max) return null;
-        return @intCast(u32, y) * self.stride + @intCast(u32, x);
+        return @as(u32, @intCast(y)) * self.stride + @as(u32, @intCast(x));
     }
 };
 

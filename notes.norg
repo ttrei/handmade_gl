@@ -1,8 +1,0 @@
-* Figure out coordinate systems
-
-  Need to figure out what coordinates I will use and where.
-
-  - World coordinates, to place entities in the game world
-  - Screen coordinates, to render the world onto pixel buffer
-    Maybe also Sub-screen coordinates, for creating "windows" within the game
-  - Model coordinates, to describe an entity

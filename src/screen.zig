@@ -1,60 +1,38 @@
 const std = @import("std");
+const geometry = @import("geometry.zig");
 
 const Allocator = std.mem.Allocator;
 
-pub const ScreenCoordinate = i32;
-pub const ScreenCoordinateSubPixel = f64;
+const PointFloat = geometry.PointFloat;
 
-// TODO
-//
-// THINK DEEPLY ABOUT COORDINATE SYSTEMS!!
+pub const ScreenCoordinate = u32;
 
 pub const Pixel = struct {
     x: ScreenCoordinate,
     y: ScreenCoordinate,
 
-    pub fn fromSubPixel(p: *const SubPixel) Pixel {
+    pub fn fromPointFloat(p: *const PointFloat) ?Pixel {
+        if (p.x < 0 or p.y < 0) return null;
         return Pixel{
             .x = @as(ScreenCoordinate, @intFromFloat(p.x)),
             .y = @as(ScreenCoordinate, @intFromFloat(p.y)),
         };
     }
-
-    pub fn sub(p: *const Pixel, other: Pixel) Pixel {
-        return Pixel{
-            .x = p.x - other.x,
-            .y = p.y - other.y,
-        };
-    }
 };
 
-pub const SubPixel = struct {
-    x: ScreenCoordinateSubPixel,
-    y: ScreenCoordinateSubPixel,
-
-    pub fn fromPixel(p: *const Pixel) SubPixel {
-        return SubPixel{
-            .x = @as(ScreenCoordinateSubPixel, @floatFromInt(p.x)),
-            .y = @as(ScreenCoordinateSubPixel, @floatFromInt(p.y)),
-        };
-    }
-};
-
-// Rectangular subset of a row-major pixel array
+// 2D pixel array, row-major
 pub const PixelBuffer = struct {
     pixels: []u32,
     // Dimensions of the subset
-    width: u32,
-    height: u32,
+    width: ScreenCoordinate,
+    height: ScreenCoordinate,
     // How many pixels have to be skipped to go directly one row down
-    stride: u32,
-    // coordinates of the top-left pixel of the subset
-    origin: Pixel,
+    stride: ScreenCoordinate,
     const Self = @This();
 
     // Initialize to the subset containing the whole array
-    pub fn init(pixels: []u32, width: u32, height: u32) !Self {
-        if (pixels.len != width * height) {
+    pub fn init(pixels: []u32, width: ScreenCoordinate, height: ScreenCoordinate) !Self {
+        if (pixels.len != @as(u32, width) * height) {
             return error.InvalidPixelBuffer;
         }
         return Self{
@@ -62,56 +40,79 @@ pub const PixelBuffer = struct {
             .width = width,
             .height = height,
             .stride = width,
-            .origin = .{ .x = 0, .y = 0 },
         };
     }
 
-    pub fn subBuffer(self: *const Self, width: u32, height: u32, origin: Pixel) Self {
+    pub fn subBuffer(
+        self: *const Self,
+        width: ScreenCoordinate,
+        height: ScreenCoordinate,
+        origin: Pixel,
+    ) !Self {
+        if (width < 1 or height < 1) return error.InvalidPixelBuffer;
+        if (origin.x + width > self.width or origin.y + height > self.height) {
+            return error.InvalidPixelBuffer;
+        }
+        const start = origin.y * self.stride + origin.x;
         return Self{
-            .pixels = self.pixels,
+            .pixels = self.pixels[start .. start + (height - 1) * self.stride + width],
             .width = width,
             .height = height,
             .stride = self.stride,
-            .origin = origin,
         };
     }
 
     pub fn clear(self: *Self, color: u32) void {
-        const x_max = @min(self.origin.x + @as(i32, @intCast(self.width)), @as(i32, @intCast(self.stride)));
-        const y_max = @min(self.origin.y + @as(i32, @intCast(self.height)), @as(i32, @intCast(self.pixels.len / self.stride)));
-        var y = @max(self.origin.y, 0);
-        while (y < y_max) : (y += 1) {
-            var x = @max(self.origin.x, 0);
-            while (x < x_max) : (x += 1) {
+        var y: ScreenCoordinate = 0;
+        while (y < self.height) : (y += 1) {
+            var x: ScreenCoordinate = 0;
+            while (x < self.width) : (x += 1) {
                 self.pixels[y * self.stride + x] = color;
             }
         }
     }
 
     // Calculate index of a Pixel, given coordinates relative to the subbuffer origin
-    pub fn pixelIdx(self: *const Self, p: Pixel) ?u32 {
-        // Outside of the subbuffer
-        if (p.x < 0 or p.y < 0 or p.x > self.width or p.y > self.height) return null;
-        const x = p.x + self.origin.x;
-        const y = p.y + self.origin.y;
-        const x_max = self.stride;
-        const y_max = self.pixels.len / self.stride;
-        // Outside of the total buffer
-        if (x < 0 or y < 0 or x >= x_max or y >= y_max) return null;
-        return @as(u32, @intCast(y)) * self.stride + @as(u32, @intCast(x));
+    pub fn pixelIdx(self: *const Self, p: *const Pixel) ?u32 {
+        if (p.x >= self.width or p.y >= self.height) return null;
+        return p.y * self.stride + p.x;
+    }
+
+    pub fn pixelValue(self: *const Self, p: *const Pixel) ?u32 {
+        return self.pixels[self.pixelIdx(p) orelse return null];
     }
 };
 
-test "pixel buffer" {
-    const width = 800;
-    const height = 600;
-    const stride = width;
-    const pixels = try std.testing.allocator.alloc(u32, width * height);
+test "buffer" {
+    const pixels = try std.testing.allocator.alloc(u32, 10 * 15);
     defer std.testing.allocator.free(pixels);
-    const buffer = try PixelBuffer.init(pixels, width, height);
-    try std.testing.expect(buffer.pixels.len == width * height);
+    var buffer = try PixelBuffer.init(pixels, 10, 15);
 
-    const buffer2 = buffer.subBuffer(50, 10, .{ .x = 10, .y = 20 });
-    try std.testing.expect(buffer2.origin.x == 10);
-    try std.testing.expect(buffer2.pixelIdx(.{ .x = 0, .y = 0 }) == 20 * stride + 10);
+    try std.testing.expectEqual(buffer.pixels.len, 10 * 15);
+
+    var buffer2 = try buffer.subBuffer(10, 15, .{ .x = 0, .y = 0 });
+    var buffer3 = try buffer.subBuffer(8, 13, .{ .x = 1, .y = 1 });
+    try std.testing.expectEqualSlices(u32, buffer.pixels, buffer2.pixels);
+
+    const white = 0xFFFFFFFF;
+    const black = 0x000000FF;
+    const red = 0xFF0000FF;
+
+    buffer.clear(white);
+    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
+    try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 0, .y = 0 }), white);
+    try std.testing.expectEqual(buffer3.pixelValue(&.{ .x = 0, .y = 0 }), white);
+
+    buffer2.clear(black);
+    buffer3.clear(red);
+    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), black);
+    try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 0, .y = 0 }), black);
+    try std.testing.expectEqual(buffer3.pixelValue(&.{ .x = 0, .y = 0 }), red);
+    try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 1, .y = 1 }), red);
+    try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 9, .y = 14 }), black);
+
+    try std.testing.expectEqualSlices(u32, buffer.pixels, buffer2.pixels);
+
+    const buffer4 = try buffer2.subBuffer(8, 13, .{ .x = 1, .y = 1 });
+    try std.testing.expectEqualSlices(u32, buffer3.pixels, buffer4.pixels);
 }

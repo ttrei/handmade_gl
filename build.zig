@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const FileSource = std.build.FileSource;
-
 pub fn build(b: *std.Build) void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
@@ -15,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("handmade_gl", .{
-        .source_file = FileSource.relative("src/gl.zig"),
+        .source_file = .{ .path = "src/gl.zig" },
     });
 
     // Creates a step for unit testing. This only builds the test executable

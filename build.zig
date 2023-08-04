@@ -1,8 +1,8 @@
 const std = @import("std");
-const Build = std.Build;
-const LazyPath = Build.LazyPath;
 
-pub fn build(b: *Build) void {
+const FileSource = std.build.FileSource;
+
+pub fn build(b: *std.Build) void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -15,13 +15,13 @@ pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("handmade_gl", .{
-        .source_file = LazyPath.relative("src/gl.zig"),
+        .source_file = FileSource.relative("src/gl.zig"),
     });
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const unit_tests = b.addTest(.{
-        .root_source_file = LazyPath.relative("src/gl.zig"),
+        .root_source_file = .{ .path = "src/gl.zig" },
         .target = target,
         .optimize = optimize,
     });

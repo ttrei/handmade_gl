@@ -100,6 +100,12 @@ pub const PointFloat = struct {
     }
 };
 
+pub const Shape = union(enum) {
+    polygon: Polygon,
+    rectangle: Rectangle,
+    circle: Circle,
+};
+
 pub const Polygon = struct {
     const Vertex = struct {
         p: PointInt,
@@ -108,26 +114,18 @@ pub const Polygon = struct {
         prev: *Vertex,
     };
 
-    arena: std.heap.ArenaAllocator = undefined,
+    allocator: Allocator = undefined,
     first: *Vertex = undefined,
     n: usize = 0,
 
     const Self = @This();
 
-    pub fn init() Self {
-        return Self{
-            .arena = std.heap.ArenaAllocator.init(std.heap.page_allocator),
-        };
-    }
-    pub fn deinit(self: *Self) void {
-        self.arena.deinit();
+    pub fn init(allocator: Allocator) Self {
+        return Self{ .allocator = allocator };
     }
 
     pub fn add_vertex(self: *Self, p: PointInt) !void {
-        // TODO: Is it OK to call arena.allocator() each time?
-        // Is the following a better way to use arena allocator?
-        // https://github.com/michal-z/zig-gamedev/blob/cabaf63cdf7960723bb5b000468b648df294bc9e/samples/gui_test_wgpu/src/gui_test_wgpu.zig#L20
-        const v = try self.arena.allocator().create(Vertex);
+        const v = try self.allocator.create(Vertex);
         if (self.n == 0) {
             v.* = .{ .p = p, .ear = false, .next = v, .prev = v };
             self.first = v;

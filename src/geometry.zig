@@ -104,6 +104,21 @@ pub const Shape = union(enum) {
     polygon: Polygon,
     rectangle: Rectangle,
     circle: Circle,
+
+    const Self = @This();
+
+    pub fn draw(
+        self: *const Self,
+        buffer: *PixelBuffer,
+        color: u32,
+        transform: ?*const CoordinateTransform,
+    ) void {
+        switch (self.*) {
+            .polygon => self.polygon.draw(buffer, color, transform),
+            .rectangle => self.rectangle.draw(buffer, color, transform),
+            .circle => self.circle.draw(buffer, color, transform),
+        }
+    }
 };
 
 pub const Polygon = struct {

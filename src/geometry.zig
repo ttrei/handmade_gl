@@ -111,12 +111,32 @@ pub const Shape = union(enum) {
         self: *const Self,
         buffer: *PixelBuffer,
         color: u32,
-        transform: ?*const CoordinateTransform,
+        t: ?*const CoordinateTransform,
     ) void {
         switch (self.*) {
-            .polygon => self.polygon.draw(buffer, color, transform),
-            .rectangle => self.rectangle.draw(buffer, color, transform),
-            .circle => self.circle.draw(buffer, color, transform),
+            .polygon => {
+                self.polygon.draw(buffer, color);
+            },
+            .rectangle => {
+                if (t != null) {
+                    var r = self.rectangle;
+                    r.transform(t.?);
+                    r.draw(buffer, color);
+                } else {
+                    self.rectangle.draw(buffer, color);
+                }
+            },
+            .circle => {
+                self.circle.draw(buffer, color);
+            },
+        }
+    }
+
+    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+        switch (self.*) {
+            .polygon => self.polygon.transform(t),
+            .rectangle => self.rectangle.transform(t),
+            .circle => self.circle.transform(t),
         }
     }
 };
@@ -166,11 +186,16 @@ pub const Polygon = struct {
         return sum;
     }
 
+    pub fn transform(t: *const CoordinateTransform) void {
+        _ = t;
+        // transform.?.applyIntInplace(&p1);
+        // transform.?.applyIntInplace(&p2);
+    }
+
     pub fn draw(
         self: *const Self,
         buffer: *PixelBuffer,
         color: u32,
-        transform: ?*const CoordinateTransform,
     ) void {
         if (self.n == 0) return;
         var p1: PointInt = undefined;
@@ -180,10 +205,6 @@ pub const Polygon = struct {
         while (i < self.n) : (i += 1) {
             p1 = v.p;
             p2 = v.next.p;
-            if (transform != null) {
-                transform.?.applyIntInplace(&p1);
-                transform.?.applyIntInplace(&p2);
-            }
             drawLineSegment(buffer, color, &p1, &p2);
             v = v.next;
         }
@@ -196,18 +217,18 @@ pub const Rectangle = struct {
 
     const Self = @This();
 
+    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+        t.applyIntInplace(&self.p1);
+        t.applyIntInplace(&self.p2);
+    }
+
     pub fn draw(
         self: *const Self,
         buffer: *PixelBuffer,
         color: u32,
-        transform: ?*const CoordinateTransform,
     ) void {
         var pt1 = self.p1;
         var pt2 = self.p2;
-        if (transform != null) {
-            transform.?.applyIntInplace(&pt1);
-            transform.?.applyIntInplace(&pt2);
-        }
         const left = @min(pt1.x, pt2.x);
         const right = @max(pt1.x, pt2.x);
         const top = @min(pt1.y, pt2.y);
@@ -233,34 +254,35 @@ pub const Circle = struct {
 
     const Self = @This();
 
+    pub fn transform(t: *const CoordinateTransform) void {
+        _ = t;
+        // transform.?.applyInplace(&self.c);
+        // self.r *= transform.?.scale;
+    }
+
     pub fn draw(
         self: *const Self,
         buffer: *PixelBuffer,
         color: u32,
-        transform: ?*const CoordinateTransform,
     ) void {
-        var ct = PointFloat.fromInt(&self.c);
-        var rt = @as(f64, @floatFromInt(self.r));
-        if (transform != null) {
-            transform.?.applyInplace(&ct);
-            rt *= transform.?.scale;
-        }
+        var cf = PointFloat.fromInt(&self.c);
+        var rf = @as(f64, @floatFromInt(self.r));
         const width = @as(f64, @floatFromInt(buffer.width));
         const height = @as(f64, @floatFromInt(buffer.height));
 
-        if (ct.x - rt >= width or ct.x + rt <= 0 or ct.y - rt >= height or ct.y + rt <= 0) return;
-        const ymin = if (ct.y - rt < 0) 0 else ct.y - rt;
-        const ymax = if (ct.y + rt > height) height else ct.y + rt;
+        if (cf.x - rf >= width or cf.x + rf <= 0 or cf.y - rf >= height or cf.y + rf <= 0) return;
+        const ymin = if (cf.y - rf < 0) 0 else cf.y - rf;
+        const ymax = if (cf.y + rf > height) height else cf.y + rf;
 
         var pixel: Pixel = undefined;
         var y: CoordinateFloat = ymin;
         var x: CoordinateFloat = undefined;
         while (y < ymax) : (y += 1) {
-            const dy = @fabs(ct.y - y);
-            const dx = std.math.sqrt(rt * rt - dy * dy);
-            if (ct.x - dx >= width or ct.x + dx <= 0) continue;
-            x = if (ct.x - dx < 0) 0 else ct.x - dx;
-            const xmax = if (ct.x + dx > width) width else ct.x + dx;
+            const dy = @fabs(cf.y - y);
+            const dx = std.math.sqrt(rf * rf - dy * dy);
+            if (cf.x - dx >= width or cf.x + dx <= 0) continue;
+            x = if (cf.x - dx < 0) 0 else cf.x - dx;
+            const xmax = if (cf.x + dx > width) width else cf.x + dx;
             while (x < xmax) : (x += 1) {
                 pixel = Pixel.fromPointFloat(&.{ .x = x, .y = y }) orelse continue;
                 buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
@@ -315,7 +337,7 @@ test "polygon" {
     try p.add_vertex(PointInt{ .x = 0, .y = 2 });
 
     buffer.clear(white);
-    p.draw(&buffer, black, null);
+    p.draw(&buffer, black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 0 }), black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 2, .y = 0 }), black);
@@ -368,7 +390,7 @@ test "overlapping pixel buffers" {
 
     buffer.clear(black);
     const rect = Rectangle{ .p1 = .{ .x = 0, .y = 0 }, .p2 = .{ .x = 6, .y = 6 } };
-    rect.draw(&buffer, white, null);
+    rect.draw(&buffer, white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 2, .y = 3 }), white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 5, .y = 5 }), white);
@@ -376,7 +398,7 @@ test "overlapping pixel buffers" {
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 6, .y = 6 }), black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 6, .y = 2 }), black);
     const rect2 = Rectangle{ .p1 = .{ .x = 1, .y = 1 }, .p2 = .{ .x = 100, .y = 100 } };
-    rect2.draw(&buffer2, green, null);
+    rect2.draw(&buffer2, green);
     try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 0, .y = 0 }), white);
     try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 1, .y = 1 }), green);
     try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 4, .y = 4 }), green);

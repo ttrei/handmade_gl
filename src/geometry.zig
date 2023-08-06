@@ -114,18 +114,21 @@ pub const Polygon = struct {
         prev: *Vertex,
     };
 
-    allocator: Allocator = undefined,
+    arena: std.heap.ArenaAllocator = undefined,
     first: *Vertex = undefined,
     n: usize = 0,
 
     const Self = @This();
 
     pub fn init(allocator: Allocator) Self {
-        return Self{ .allocator = allocator };
+        return Self{ .arena = std.heap.ArenaAllocator.init(allocator) };
+    }
+    pub fn deinit(self: *Self) void {
+        self.arena.deinit();
     }
 
     pub fn add_vertex(self: *Self, p: PointInt) !void {
-        const v = try self.allocator.create(Vertex);
+        const v = try self.arena.allocator().create(Vertex);
         if (self.n == 0) {
             v.* = .{ .p = p, .ear = false, .next = v, .prev = v };
             self.first = v;
@@ -290,7 +293,8 @@ test "polygon" {
     const white = 0xFFFFFFFF;
     const black = 0x000000FF;
 
-    var p = Polygon.init();
+    var p = Polygon.init(std.testing.allocator);
+    defer p.deinit();
     try p.add_vertex(PointInt{ .x = 0, .y = 0 });
     try p.add_vertex(PointInt{ .x = 2, .y = 0 });
     try p.add_vertex(PointInt{ .x = 0, .y = 2 });

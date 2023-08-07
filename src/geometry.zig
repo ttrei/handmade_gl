@@ -115,22 +115,25 @@ pub const Shape = union(enum) {
         }
     }
 
-    pub fn transform_and_draw(
-        self: *const Self,
-        t: *const CoordinateTransform,
-        buffer: *PixelBuffer,
-        color: u32,
-    ) void {
-        var cloned = self.*;
-        cloned.transform(t);
-        cloned.draw(buffer, color);
-    }
-
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
         switch (self.*) {
             .polygon => self.polygon.transform(t),
             .rectangle => self.rectangle.transform(t),
             .circle => self.circle.transform(t),
+        }
+    }
+
+    pub fn clone(self: *const Self, allocator: Allocator) !Self {
+        return switch (self.*) {
+            .polygon => .{ .polygon = try self.polygon.clone(allocator) },
+            else => self.*,
+        };
+    }
+
+    pub fn deinit(self: *Self) void {
+        switch (self.*) {
+            .polygon => self.polygon.deinit(),
+            else => {},
         }
     }
 };
@@ -185,6 +188,17 @@ pub const Polygon = struct {
         _ = t;
         // transform.?.applyIntInplace(&p1);
         // transform.?.applyIntInplace(&p2);
+    }
+
+    pub fn clone(self: *const Self, allocator: Allocator) !Polygon {
+        var cloned = Polygon.init(allocator);
+        if (self.n == 0) return cloned;
+        var current = self.first;
+        try cloned.add_vertex(current.p);
+        while (current.next != self.first) : (current = current.next) {
+            try cloned.add_vertex(current.p);
+        }
+        return cloned;
     }
 
     pub fn draw(

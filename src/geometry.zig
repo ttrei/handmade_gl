@@ -127,7 +127,13 @@ pub const Shape = union(enum) {
                 }
             },
             .circle => {
-                self.circle.draw(buffer, color);
+                if (t != null) {
+                    var c = self.circle;
+                    c.transform(t.?);
+                    c.draw(buffer, color);
+                } else {
+                    self.circle.draw(buffer, color);
+                }
             },
         }
     }
@@ -254,10 +260,9 @@ pub const Circle = struct {
 
     const Self = @This();
 
-    pub fn transform(t: *const CoordinateTransform) void {
-        _ = t;
-        // transform.?.applyInplace(&self.c);
-        // self.r *= transform.?.scale;
+    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+        t.applyIntInplace(&self.c);
+        self.r = t.scaleInt(self.r);
     }
 
     pub fn draw(

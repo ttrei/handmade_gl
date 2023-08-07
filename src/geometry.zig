@@ -107,35 +107,23 @@ pub const Shape = union(enum) {
 
     const Self = @This();
 
-    pub fn draw(
+    pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
+        switch (self.*) {
+            .polygon => self.polygon.draw(buffer, color),
+            .rectangle => self.rectangle.draw(buffer, color),
+            .circle => self.circle.draw(buffer, color),
+        }
+    }
+
+    pub fn transform_and_draw(
         self: *const Self,
+        t: *const CoordinateTransform,
         buffer: *PixelBuffer,
         color: u32,
-        t: ?*const CoordinateTransform,
     ) void {
-        switch (self.*) {
-            .polygon => {
-                self.polygon.draw(buffer, color);
-            },
-            .rectangle => {
-                if (t != null) {
-                    var r = self.rectangle;
-                    r.transform(t.?);
-                    r.draw(buffer, color);
-                } else {
-                    self.rectangle.draw(buffer, color);
-                }
-            },
-            .circle => {
-                if (t != null) {
-                    var c = self.circle;
-                    c.transform(t.?);
-                    c.draw(buffer, color);
-                } else {
-                    self.circle.draw(buffer, color);
-                }
-            },
-        }
+        var cloned = self.*;
+        cloned.transform(t);
+        cloned.draw(buffer, color);
     }
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
@@ -192,7 +180,8 @@ pub const Polygon = struct {
         return sum;
     }
 
-    pub fn transform(t: *const CoordinateTransform) void {
+    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+        _ = self;
         _ = t;
         // transform.?.applyIntInplace(&p1);
         // transform.?.applyIntInplace(&p2);

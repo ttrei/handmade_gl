@@ -175,27 +175,28 @@ pub const Polygon = struct {
     pub fn area2(self: *const Self) i32 {
         if (self.n < 3) return 0;
         var sum: i32 = 0;
-        const f = self.first;
-        var a = f.next;
-        while (a.next != f) : (a = a.next) {
-            sum += orientedArea2(&f.p, &a.p, &a.next.p);
+        var a = self.first.next;
+        while (a.next != self.first) : (a = a.next) {
+            sum += orientedArea2(&self.first.p, &a.p, &a.next.p);
         }
         return sum;
     }
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        _ = self;
-        _ = t;
-        // transform.?.applyIntInplace(&p1);
-        // transform.?.applyIntInplace(&p2);
+        if (self.n == 0) return;
+        t.applyIntInplace(&self.first.p);
+        var current = self.first.next;
+        while (current != self.first) : (current = current.next) {
+            t.applyIntInplace(&current.p);
+        }
     }
 
     pub fn clone(self: *const Self, allocator: Allocator) !Polygon {
         var cloned = Polygon.init(allocator);
         if (self.n == 0) return cloned;
-        var current = self.first;
-        try cloned.add_vertex(current.p);
-        while (current.next != self.first) : (current = current.next) {
+        try cloned.add_vertex(self.first.p);
+        var current = self.first.next;
+        while (current != self.first) : (current = current.next) {
             try cloned.add_vertex(current.p);
         }
         return cloned;

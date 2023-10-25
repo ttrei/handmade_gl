@@ -287,7 +287,7 @@ pub const Circle = struct {
         var y: CoordinateFloat = ymin;
         var x: CoordinateFloat = undefined;
         while (y < ymax) : (y += 1) {
-            const dy = @fabs(cf.y - y);
+            const dy = @abs(cf.y - y);
             const dx = std.math.sqrt(rf * rf - dy * dy);
             if (cf.x - dx >= width or cf.x + dx <= 0) continue;
             x = if (cf.x - dx < 0) 0 else cf.x - dx;

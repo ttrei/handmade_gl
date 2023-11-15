@@ -84,6 +84,10 @@ pub const PointInt = struct {
     pub fn sub(self: *const Self, other: *const PointInt) Self {
         return Self{ .x = self.x - other.x, .y = self.y - other.y };
     }
+
+    pub fn add(self: *const Self, other: *const PointInt) Self {
+        return Self{ .x = self.x + other.x, .y = self.y + other.y };
+    }
 };
 
 pub const PointFloat = struct {

@@ -304,6 +304,22 @@ pub const Circle = struct {
     }
 };
 
+pub const LineSegment = struct {
+    p1: PointInt,
+    p2: PointInt,
+
+    const Self = @This();
+
+    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+        t.applyIntInplace(&self.p1);
+        t.applyIntInplace(&self.p2);
+    }
+
+    pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
+        drawLineSegment(buffer, color, &self.p1, &self.p2);
+    }
+};
+
 pub fn orientedArea2(a: *const PointInt, b: *const PointInt, c: *const PointInt) i32 {
     return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
 }
@@ -375,7 +391,8 @@ test "overlapping pixel buffers" {
     const green = 0x00FF00FF;
 
     buffer.clear(black);
-    drawLineSegment(&buffer, white, &.{ .x = 0, .y = 0 }, &.{ .x = 9, .y = 9 });
+    const line = LineSegment{ .p1 = .{ .x = 0, .y = 0 }, .p2 = .{ .x = 9, .y = 9 } };
+    line.draw(&buffer, white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 1 }), black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 1 }), white);

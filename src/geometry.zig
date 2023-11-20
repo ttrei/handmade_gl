@@ -53,11 +53,16 @@ pub const CoordinateTransform = struct {
         return @intFromFloat(self.scale * @as(f64, @floatFromInt(a)));
     }
 
-    pub fn reverseInt(self: *const Self, p: *const PointInt) PointInt {
-        return PointInt{
-            .x = @intFromFloat((@as(f64, @floatFromInt(p.x)) - self.translate_x) / self.scale),
-            .y = @intFromFloat((@as(f64, @floatFromInt(p.y)) - self.translate_y) / self.scale),
+    pub fn reverseInt(self: *const Self, p: *const PointInt) PointFloat {
+        return .{
+            .x = (@as(f64, @floatFromInt(p.x)) - self.translate_x) / self.scale,
+            .y = (@as(f64, @floatFromInt(p.y)) - self.translate_y) / self.scale,
         };
+    }
+
+    pub fn reverseIntAsInt(self: *const Self, p: *const PointInt) PointInt {
+        const p2 = self.reverseInt(p);
+        return .{ .x = @intFromFloat(p2.x), .y = @intFromFloat(p2.y) };
     }
 };
 

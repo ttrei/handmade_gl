@@ -268,14 +268,14 @@ pub const Rectangle = struct {
 };
 
 pub const Circle = struct {
-    c: PointInt,
-    r: u32,
+    c: PointFloat,
+    r: f64,
 
     const Self = @This();
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyIntInplace(&self.c);
-        self.r = t.scaleInt(self.r);
+        t.applyInplace(&self.c);
+        self.r = t.scale * self.r;
     }
 
     pub fn draw(
@@ -283,24 +283,24 @@ pub const Circle = struct {
         buffer: *PixelBuffer,
         color: u32,
     ) void {
-        var cf = PointFloat.fromInt(&self.c);
-        var rf = @as(f64, @floatFromInt(self.r));
+        const c = self.c;
+        const r = self.r;
         const width = @as(f64, @floatFromInt(buffer.width));
         const height = @as(f64, @floatFromInt(buffer.height));
 
-        if (cf.x - rf >= width or cf.x + rf <= 0 or cf.y - rf >= height or cf.y + rf <= 0) return;
-        const ymin = if (cf.y - rf < 0) 0 else cf.y - rf;
-        const ymax = if (cf.y + rf > height) height else cf.y + rf;
+        if (c.x - r >= width or c.x + r <= 0 or c.y - r >= height or c.y + r <= 0) return;
+        const ymin = if (c.y - r < 0) 0 else c.y - r;
+        const ymax = if (c.y + r > height) height else c.y + r;
 
         var pixel: Pixel = undefined;
         var y: CoordinateFloat = ymin;
         var x: CoordinateFloat = undefined;
         while (y < ymax) : (y += 1) {
-            const dy = @abs(cf.y - y);
-            const dx = std.math.sqrt(rf * rf - dy * dy);
-            if (cf.x - dx >= width or cf.x + dx <= 0) continue;
-            x = if (cf.x - dx < 0) 0 else cf.x - dx;
-            const xmax = if (cf.x + dx > width) width else cf.x + dx;
+            const dy = @abs(c.y - y);
+            const dx = std.math.sqrt(r * r - dy * dy);
+            if (c.x - dx >= width or c.x + dx <= 0) continue;
+            x = if (c.x - dx < 0) 0 else c.x - dx;
+            const xmax = if (c.x + dx > width) width else c.x + dx;
             while (x < xmax) : (x += 1) {
                 pixel = Pixel.fromPointFloat(&.{ .x = x, .y = y }) orelse continue;
                 buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
@@ -310,18 +310,18 @@ pub const Circle = struct {
 };
 
 pub const LineSegment = struct {
-    p1: PointInt,
-    p2: PointInt,
+    p1: PointFloat,
+    p2: PointFloat,
 
     const Self = @This();
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyIntInplace(&self.p1);
-        t.applyIntInplace(&self.p2);
+        t.applyInplace(&self.p1);
+        t.applyInplace(&self.p2);
     }
 
     pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
-        drawLineSegment(buffer, color, &self.p1, &self.p2);
+        drawLineSegmentSubpixel(buffer, color, &self.p1, &self.p2);
     }
 };
 

@@ -6,7 +6,7 @@ const Allocator = std.mem.Allocator;
 
 const Pixel = screen.Pixel;
 
-const CoordinateFloat = f64;
+const CoordinateType = f64;
 
 pub const CoordinateTransform = struct {
     const Self = @This();
@@ -36,8 +36,8 @@ pub const CoordinateTransform = struct {
 };
 
 pub const Point = struct {
-    x: CoordinateFloat,
-    y: CoordinateFloat,
+    x: CoordinateType,
+    y: CoordinateType,
 };
 
 pub const Shape = union(enum) {
@@ -200,7 +200,7 @@ pub const Rectangle = struct {
 
 pub const Circle = struct {
     c: Point,
-    r: f64,
+    r: CoordinateType,
 
     const Self = @This();
 
@@ -216,16 +216,16 @@ pub const Circle = struct {
     ) void {
         const c = self.c;
         const r = self.r;
-        const width = @as(f64, @floatFromInt(buffer.width));
-        const height = @as(f64, @floatFromInt(buffer.height));
+        const width = @as(CoordinateType, @floatFromInt(buffer.width));
+        const height = @as(CoordinateType, @floatFromInt(buffer.height));
 
         if (c.x - r >= width or c.x + r <= 0 or c.y - r >= height or c.y + r <= 0) return;
         const ymin = if (c.y - r < 0) 0 else c.y - r;
         const ymax = if (c.y + r > height) height else c.y + r;
 
         var pixel: Pixel = undefined;
-        var y: CoordinateFloat = ymin;
-        var x: CoordinateFloat = undefined;
+        var y: CoordinateType = ymin;
+        var x: CoordinateType = undefined;
         while (y < ymax) : (y += 1) {
             const dy = @abs(c.y - y);
             const dx = std.math.sqrt(r * r - dy * dy);
@@ -269,7 +269,7 @@ pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *
 
     var p: Point = undefined;
     var pixel: Pixel = undefined;
-    var t: f64 = 0;
+    var t: CoordinateType = 0;
     while (t < length) : (t += 1) {
         p.x = p1.x + dx * t / length;
         p.y = p1.y + dy * t / length;

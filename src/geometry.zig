@@ -18,15 +18,15 @@ pub const CoordinateTransform = struct {
     translate_y: f64,
     scale: f64,
 
-    pub fn apply(self: *const Self, p: *const PointFloat) PointFloat {
-        return PointFloat{
+    pub fn apply(self: *const Self, p: *const Point) Point {
+        return Point{
             .x = self.scale * p.x + self.translate_x,
             .y = self.scale * p.y + self.translate_y,
         };
     }
 
-    pub fn reverse(self: *const Self, p: *const PointFloat) PointFloat {
-        return PointFloat{
+    pub fn reverse(self: *const Self, p: *const Point) Point {
+        return Point{
             .x = (p.x - self.translate_x) / self.scale,
             .y = (p.y - self.translate_y) / self.scale,
         };
@@ -39,7 +39,7 @@ pub const CoordinateTransform = struct {
         };
     }
 
-    pub fn applyInplace(self: *const Self, p: *PointFloat) void {
+    pub fn applyInplace(self: *const Self, p: *Point) void {
         p.x = self.scale * p.x + self.translate_x;
         p.y = self.scale * p.y + self.translate_y;
     }
@@ -53,7 +53,7 @@ pub const CoordinateTransform = struct {
         return @intFromFloat(self.scale * @as(f64, @floatFromInt(a)));
     }
 
-    pub fn reverseInt(self: *const Self, p: *const PointInt) PointFloat {
+    pub fn reverseInt(self: *const Self, p: *const PointInt) Point {
         return .{
             .x = (@as(f64, @floatFromInt(p.x)) - self.translate_x) / self.scale,
             .y = (@as(f64, @floatFromInt(p.y)) - self.translate_y) / self.scale,
@@ -72,7 +72,7 @@ pub const PointInt = struct {
 
     const Self = @This();
 
-    pub fn fromFloat(p: *const PointFloat) Self {
+    pub fn fromFloat(p: *const Point) Self {
         return Self{
             .x = @as(CoordinateInt, @intFromFloat(p.x)),
             .y = @as(CoordinateInt, @intFromFloat(p.y)),
@@ -95,7 +95,7 @@ pub const PointInt = struct {
     }
 };
 
-pub const PointFloat = struct {
+pub const Point = struct {
     x: CoordinateFloat,
     y: CoordinateFloat,
 
@@ -268,7 +268,7 @@ pub const Rectangle = struct {
 };
 
 pub const Circle = struct {
-    c: PointFloat,
+    c: Point,
     r: f64,
 
     const Self = @This();
@@ -302,7 +302,7 @@ pub const Circle = struct {
             x = if (c.x - dx < 0) 0 else c.x - dx;
             const xmax = if (c.x + dx > width) width else c.x + dx;
             while (x < xmax) : (x += 1) {
-                pixel = Pixel.fromPointFloat(&.{ .x = x, .y = y }) orelse continue;
+                pixel = Pixel.fromPoint(&.{ .x = x, .y = y }) orelse continue;
                 buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
             }
         }
@@ -310,8 +310,8 @@ pub const Circle = struct {
 };
 
 pub const LineSegment = struct {
-    p1: PointFloat,
-    p2: PointFloat,
+    p1: Point,
+    p2: Point,
 
     const Self = @This();
 
@@ -333,25 +333,25 @@ pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const PointInt, p2
     drawLineSegmentSubpixel(
         buffer,
         color,
-        &PointFloat.fromInt(p1),
-        &PointFloat.fromInt(p2),
+        &Point.fromInt(p1),
+        &Point.fromInt(p2),
     );
 }
 
-pub fn drawLineSegmentSubpixel(buffer: *PixelBuffer, color: u32, p1: *const PointFloat, p2: *const PointFloat) void {
+pub fn drawLineSegmentSubpixel(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *const Point) void {
     // Non-optimal implementation - invisible segments are not culled.
 
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const length = @sqrt(dx * dx + dy * dy);
 
-    var p: PointFloat = undefined;
+    var p: Point = undefined;
     var pixel: Pixel = undefined;
     var t: f64 = 0;
     while (t < length) : (t += 1) {
         p.x = p1.x + dx * t / length;
         p.y = p1.y + dy * t / length;
-        pixel = Pixel.fromPointFloat(&p) orelse continue;
+        pixel = Pixel.fromPoint(&p) orelse continue;
         buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
     }
 }

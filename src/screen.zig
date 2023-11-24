@@ -3,7 +3,6 @@ const geometry = @import("geometry.zig");
 
 const Allocator = std.mem.Allocator;
 
-const PointInt = geometry.PointInt;
 const Point = geometry.Point;
 
 pub const ScreenCoordinate = u32;
@@ -17,14 +16,6 @@ pub const Pixel = struct {
         return Pixel{
             .x = @as(ScreenCoordinate, @intFromFloat(p.x)),
             .y = @as(ScreenCoordinate, @intFromFloat(p.y)),
-        };
-    }
-
-    pub fn fromPointInt(p: *const PointInt) ?Pixel {
-        if (p.x < 0 or p.y < 0) return null;
-        return Pixel{
-            .x = @as(ScreenCoordinate, @intCast(p.x)),
-            .y = @as(ScreenCoordinate, @intCast(p.y)),
         };
     }
 };

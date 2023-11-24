@@ -6,10 +6,7 @@ const Allocator = std.mem.Allocator;
 
 const Pixel = screen.Pixel;
 
-const CoordinateInt = i32;
 const CoordinateFloat = f64;
-
-const ScreenCoordinate = screen.ScreenCoordinate;
 
 pub const CoordinateTransform = struct {
     const Self = @This();
@@ -32,81 +29,15 @@ pub const CoordinateTransform = struct {
         };
     }
 
-    pub fn applyInt(self: *const Self, p: *const PointInt) PointInt {
-        return PointInt{
-            .x = @intFromFloat(self.scale * @as(f64, @floatFromInt(p.x)) + self.translate_x),
-            .y = @intFromFloat(self.scale * @as(f64, @floatFromInt(p.y)) + self.translate_y),
-        };
-    }
-
     pub fn applyInplace(self: *const Self, p: *Point) void {
         p.x = self.scale * p.x + self.translate_x;
         p.y = self.scale * p.y + self.translate_y;
-    }
-
-    pub fn applyIntInplace(self: *const Self, p: *PointInt) void {
-        p.x = @intFromFloat(self.scale * @as(f64, @floatFromInt(p.x)) + self.translate_x);
-        p.y = @intFromFloat(self.scale * @as(f64, @floatFromInt(p.y)) + self.translate_y);
-    }
-
-    pub fn scaleInt(self: *const Self, a: u32) u32 {
-        return @intFromFloat(self.scale * @as(f64, @floatFromInt(a)));
-    }
-
-    pub fn reverseInt(self: *const Self, p: *const PointInt) Point {
-        return .{
-            .x = (@as(f64, @floatFromInt(p.x)) - self.translate_x) / self.scale,
-            .y = (@as(f64, @floatFromInt(p.y)) - self.translate_y) / self.scale,
-        };
-    }
-
-    pub fn reverseIntAsInt(self: *const Self, p: *const PointInt) PointInt {
-        const p2 = self.reverseInt(p);
-        return .{ .x = @intFromFloat(p2.x), .y = @intFromFloat(p2.y) };
-    }
-};
-
-pub const PointInt = struct {
-    x: CoordinateInt,
-    y: CoordinateInt,
-
-    const Self = @This();
-
-    pub fn fromFloat(p: *const Point) Self {
-        return Self{
-            .x = @as(CoordinateInt, @intFromFloat(p.x)),
-            .y = @as(CoordinateInt, @intFromFloat(p.y)),
-        };
-    }
-
-    pub fn fromPixel(p: *const Pixel) Self {
-        return Self{
-            .x = @as(i32, @intCast(p.x)),
-            .y = @as(i32, @intCast(p.y)),
-        };
-    }
-
-    pub fn sub(self: *const Self, other: *const PointInt) Self {
-        return Self{ .x = self.x - other.x, .y = self.y - other.y };
-    }
-
-    pub fn add(self: *const Self, other: *const PointInt) Self {
-        return Self{ .x = self.x + other.x, .y = self.y + other.y };
     }
 };
 
 pub const Point = struct {
     x: CoordinateFloat,
     y: CoordinateFloat,
-
-    const Self = @This();
-
-    pub fn fromInt(p: *const PointInt) Self {
-        return Self{
-            .x = @as(CoordinateFloat, @floatFromInt(p.x)),
-            .y = @as(CoordinateFloat, @floatFromInt(p.y)),
-        };
-    }
 };
 
 pub const Shape = union(enum) {
@@ -149,7 +80,7 @@ pub const Shape = union(enum) {
 
 pub const Polygon = struct {
     const Vertex = struct {
-        p: PointInt,
+        p: Point,
         ear: bool,
         next: *Vertex,
         prev: *Vertex,
@@ -168,7 +99,7 @@ pub const Polygon = struct {
         self.arena.deinit();
     }
 
-    pub fn add_vertex(self: *Self, p: PointInt) !void {
+    pub fn add_vertex(self: *Self, p: Point) !void {
         const v = try self.arena.allocator().create(Vertex);
         if (self.n == 0) {
             v.* = .{ .p = p, .ear = false, .next = v, .prev = v };
@@ -217,8 +148,8 @@ pub const Polygon = struct {
         color: u32,
     ) void {
         if (self.n == 0) return;
-        var p1: PointInt = undefined;
-        var p2: PointInt = undefined;
+        var p1: Point = undefined;
+        var p2: Point = undefined;
         var v = self.first;
         var i: usize = 0;
         while (i < self.n) : (i += 1) {
@@ -231,8 +162,8 @@ pub const Polygon = struct {
 };
 
 pub const Rectangle = struct {
-    p1: PointInt,
-    p2: PointInt,
+    p1: Point,
+    p2: Point,
 
     const Self = @This();
 
@@ -248,10 +179,10 @@ pub const Rectangle = struct {
     ) void {
         var pt1 = self.p1;
         var pt2 = self.p2;
-        const left = @min(pt1.x, pt2.x);
-        const right = @max(pt1.x, pt2.x);
-        const top = @min(pt1.y, pt2.y);
-        const bottom = @max(pt1.y, pt2.y);
+        const left = @as(i32, @intFromFloat(@round(@min(pt1.x, pt2.x))));
+        const right = @as(i32, @intFromFloat(@round(@max(pt1.x, pt2.x))));
+        const top = @as(i32, @intFromFloat(@round(@min(pt1.y, pt2.y))));
+        const bottom = @as(i32, @intFromFloat(@round(@max(pt1.y, pt2.y))));
         if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
         const clamped_left: u32 = if (left < 0) 0 else @as(u32, @intCast(left));
         const clamped_top: u32 = if (top < 0) 0 else @as(u32, @intCast(top));
@@ -321,24 +252,15 @@ pub const LineSegment = struct {
     }
 
     pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
-        drawLineSegmentSubpixel(buffer, color, &self.p1, &self.p2);
+        drawLineSegment(buffer, color, &self.p1, &self.p2);
     }
 };
 
-pub fn orientedArea2(a: *const PointInt, b: *const PointInt, c: *const PointInt) i32 {
+pub fn orientedArea2(a: *const Point, b: *const Point, c: *const Point) i32 {
     return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
 }
 
-pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const PointInt, p2: *const PointInt) void {
-    drawLineSegmentSubpixel(
-        buffer,
-        color,
-        &Point.fromInt(p1),
-        &Point.fromInt(p2),
-    );
-}
-
-pub fn drawLineSegmentSubpixel(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *const Point) void {
+pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *const Point) void {
     // Non-optimal implementation - invisible segments are not culled.
 
     const dx = p2.x - p1.x;
@@ -366,9 +288,9 @@ test "polygon" {
 
     var p = Polygon.init(std.testing.allocator);
     defer p.deinit();
-    try p.add_vertex(PointInt{ .x = 0, .y = 0 });
-    try p.add_vertex(PointInt{ .x = 2, .y = 0 });
-    try p.add_vertex(PointInt{ .x = 0, .y = 2 });
+    try p.add_vertex(Point{ .x = 0, .y = 0 });
+    try p.add_vertex(Point{ .x = 2, .y = 0 });
+    try p.add_vertex(Point{ .x = 0, .y = 2 });
 
     buffer.clear(white);
     p.draw(&buffer, black);
@@ -406,7 +328,7 @@ test "overlapping pixel buffers" {
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 8, .y = 8 }), white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 9, .y = 9 }), black);
 
-    drawLineSegmentSubpixel(&buffer, red, &.{ .x = 1.0, .y = -2.0 }, &.{ .x = 1.0, .y = 3.0 });
+    drawLineSegment(&buffer, red, &.{ .x = 1.0, .y = -2.0 }, &.{ .x = 1.0, .y = 3.0 });
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 1 }), red);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 2 }), red);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 3 }), black);

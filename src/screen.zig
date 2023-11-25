@@ -5,17 +5,15 @@ const Allocator = std.mem.Allocator;
 
 const Point = geometry.Point;
 
-pub const ScreenCoordinate = u32;
-
 pub const Pixel = struct {
-    x: ScreenCoordinate,
-    y: ScreenCoordinate,
+    x: i32,
+    y: i32,
 
     pub fn fromPoint(p: *const Point) ?Pixel {
         if (p.x < 0 or p.y < 0) return null;
         return Pixel{
-            .x = @as(ScreenCoordinate, @intFromFloat(p.x)),
-            .y = @as(ScreenCoordinate, @intFromFloat(p.y)),
+            .x = @as(i32, @intFromFloat(p.x)),
+            .y = @as(i32, @intFromFloat(p.y)),
         };
     }
 };
@@ -24,14 +22,14 @@ pub const Pixel = struct {
 pub const PixelBuffer = struct {
     pixels: []u32,
     // Dimensions of the subset
-    width: ScreenCoordinate,
-    height: ScreenCoordinate,
+    width: u32,
+    height: u32,
     // How many pixels have to be skipped to go directly one row down
-    stride: ScreenCoordinate,
+    stride: u32,
     const Self = @This();
 
     // Initialize to the subset containing the whole array
-    pub fn init(pixels: []u32, width: ScreenCoordinate, height: ScreenCoordinate) !Self {
+    pub fn init(pixels: []u32, width: u32, height: u32) !Self {
         if (pixels.len != @as(u32, width) * height) {
             return error.InvalidPixelBuffer;
         }
@@ -45,15 +43,15 @@ pub const PixelBuffer = struct {
 
     pub fn subBuffer(
         self: *const Self,
-        width: ScreenCoordinate,
-        height: ScreenCoordinate,
+        width: u32,
+        height: u32,
         origin: Pixel,
     ) !Self {
         if (width < 1 or height < 1) return error.InvalidPixelBuffer;
-        if (origin.x + width > self.width or origin.y + height > self.height) {
+        if (origin.x + @as(i32, @intCast(width)) > self.width or origin.y + @as(i32, @intCast(height)) > self.height) {
             return error.InvalidPixelBuffer;
         }
-        const start = origin.y * self.stride + origin.x;
+        const start = @as(u32, @intCast(origin.y)) * self.stride + @as(u32, @intCast(origin.x));
         return Self{
             .pixels = self.pixels[start .. start + (height - 1) * self.stride + width],
             .width = width,
@@ -63,9 +61,9 @@ pub const PixelBuffer = struct {
     }
 
     pub fn clear(self: *Self, color: u32) void {
-        var y: ScreenCoordinate = 0;
+        var y: u32 = 0;
         while (y < self.height) : (y += 1) {
-            var x: ScreenCoordinate = 0;
+            var x: u32 = 0;
             while (x < self.width) : (x += 1) {
                 self.pixels[y * self.stride + x] = color;
             }
@@ -73,14 +71,14 @@ pub const PixelBuffer = struct {
     }
 
     pub fn drawWireframe(self: *Self, color: u32) void {
-        var x: ScreenCoordinate = 0;
+        var x: u32 = 0;
         const last_row_start = self.stride * (self.height - 1);
         while (x < self.width) : (x += 1) {
             self.pixels[x] = color;
             self.pixels[last_row_start + x] = color;
         }
-        var y: ScreenCoordinate = 1;
-        var row_start: ScreenCoordinate = undefined;
+        var y: u32 = 1;
+        var row_start: u32 = undefined;
         while (y < self.height - 1) : (y += 1) {
             row_start = y * self.stride;
             self.pixels[row_start] = color;
@@ -90,8 +88,9 @@ pub const PixelBuffer = struct {
 
     // Calculate index of a Pixel, given coordinates relative to the subbuffer origin
     pub fn pixelIdx(self: *const Self, p: *const Pixel) ?u32 {
+        if (p.x < 0 or p.y < 0) return null;
         if (p.x >= self.width or p.y >= self.height) return null;
-        return p.y * self.stride + p.x;
+        return @as(u32, @intCast(p.y)) * self.stride + @as(u32, @intCast(p.x));
     }
 
     pub fn pixelValue(self: *const Self, p: *const Pixel) ?u32 {

@@ -6,8 +6,6 @@ const Allocator = std.mem.Allocator;
 
 const Pixel = screen.Pixel;
 
-const CoordinateType = f64;
-
 pub const CoordinateTransform = struct {
     const Self = @This();
 
@@ -36,8 +34,90 @@ pub const CoordinateTransform = struct {
 };
 
 pub const Point = struct {
-    x: CoordinateType,
-    y: CoordinateType,
+    x: f64,
+    y: f64,
+
+    pub fn subtract(self: *const Point, other: Point) Vec2 {
+        return Vec2{
+            .x = self.x - other.x,
+            .y = self.y - other.y,
+        };
+    }
+
+    pub fn translate(self: *const Point, displacement: Vec2) Point {
+        return Point{
+            .x = self.x + displacement.x,
+            .y = self.y + displacement.y,
+        };
+    }
+
+    pub fn add(self: *const Point, p2: Point) Point {
+        return Point{
+            .x = self.x + p2.x,
+            .y = self.y + p2.y,
+        };
+    }
+
+    pub fn sub(self: *const Point, p2: Point) Point {
+        return Point{
+            .x = self.x - p2.x,
+            .y = self.y - p2.y,
+        };
+    }
+};
+
+/// Free vector (we care only about its magnitude and direction)
+pub const Vec2 = struct {
+    x: f64,
+    y: f64,
+
+    pub fn add(self: *const Vec2, other: Vec2) Vec2 {
+        return Vec2{
+            .x = self.x + other.x,
+            .y = self.y + other.y,
+        };
+    }
+
+    pub fn subtract(self: *const Vec2, other: Vec2) Vec2 {
+        return self.add(other.mul(-1));
+    }
+
+    pub fn mul(self: *const Vec2, multiplier: f64) Vec2 {
+        return Vec2{
+            .x = self.x * multiplier,
+            .y = self.y * multiplier,
+        };
+    }
+
+    pub fn dot(self: *const Vec2, other: Vec2) f64 {
+        return self.x * other.x + self.y * other.y;
+    }
+
+    pub fn squared(self: *const Vec2) f64 {
+        return self.dot(self.*);
+    }
+
+    pub fn normalized(self: *const Vec2) Vec2 {
+        return self.mul(1 / @sqrt(self.squared()));
+    }
+
+    pub fn invertX(self: *const Vec2) Vec2 {
+        return Vec2{ .x = -self.x, .y = self.y };
+    }
+
+    pub fn invertY(self: *const Vec2) Vec2 {
+        return Vec2{ .x = self.x, .y = -self.y };
+    }
+
+    pub fn angle(self: *const Vec2) f64 {
+        return std.math.atan2(f64, self.y, self.x);
+    }
+};
+
+/// Bound vector (we care about its starting point)
+pub const BoundVec2 = struct {
+    pos: Point,
+    vec: Vec2,
 };
 
 pub const Shape = union(enum) {
@@ -124,10 +204,10 @@ pub const Polygon = struct {
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
         if (self.n == 0) return;
-        t.applyIntInplace(&self.first.p);
+        t.applyInplace(&self.first.p);
         var current = self.first.next;
         while (current != self.first) : (current = current.next) {
-            t.applyIntInplace(&current.p);
+            t.applyInplace(&current.p);
         }
     }
 
@@ -168,8 +248,8 @@ pub const Rectangle = struct {
     const Self = @This();
 
     pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyIntInplace(&self.p1);
-        t.applyIntInplace(&self.p2);
+        t.applyInplace(&self.p1);
+        t.applyInplace(&self.p2);
     }
 
     pub fn draw(
@@ -184,10 +264,10 @@ pub const Rectangle = struct {
         const top = @as(i32, @intFromFloat(@round(@min(pt1.y, pt2.y))));
         const bottom = @as(i32, @intFromFloat(@round(@max(pt1.y, pt2.y))));
         if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
-        const clamped_left: u32 = if (left < 0) 0 else @as(u32, @intCast(left));
-        const clamped_top: u32 = if (top < 0) 0 else @as(u32, @intCast(top));
-        const clamped_right: u32 = if (right > buffer.width) buffer.width else @as(u32, @intCast(right));
-        const clamped_bottom: u32 = if (bottom > buffer.height) buffer.height else @as(u32, @intCast(bottom));
+        const clamped_left: i32 = if (left < 0) 0 else left;
+        const clamped_top: i32 = if (top < 0) 0 else top;
+        const clamped_right: i32 = if (right > buffer.width) @as(i32, @intCast(buffer.width)) else right;
+        const clamped_bottom: i32 = if (bottom > buffer.height) @as(i32, @intCast(buffer.height)) else bottom;
         var p: Pixel = .{ .x = clamped_left, .y = clamped_top };
         while (p.y < clamped_bottom) : (p.y += 1) {
             p.x = clamped_left;
@@ -200,7 +280,7 @@ pub const Rectangle = struct {
 
 pub const Circle = struct {
     c: Point,
-    r: CoordinateType,
+    r: f64,
 
     const Self = @This();
 
@@ -216,16 +296,16 @@ pub const Circle = struct {
     ) void {
         const c = self.c;
         const r = self.r;
-        const width = @as(CoordinateType, @floatFromInt(buffer.width));
-        const height = @as(CoordinateType, @floatFromInt(buffer.height));
+        const width = @as(f64, @floatFromInt(buffer.width));
+        const height = @as(f64, @floatFromInt(buffer.height));
 
         if (c.x - r >= width or c.x + r <= 0 or c.y - r >= height or c.y + r <= 0) return;
         const ymin = if (c.y - r < 0) 0 else c.y - r;
         const ymax = if (c.y + r > height) height else c.y + r;
 
         var pixel: Pixel = undefined;
-        var y: CoordinateType = ymin;
-        var x: CoordinateType = undefined;
+        var y: f64 = ymin;
+        var x: f64 = undefined;
         while (y < ymax) : (y += 1) {
             const dy = @abs(c.y - y);
             const dx = std.math.sqrt(r * r - dy * dy);
@@ -269,7 +349,7 @@ pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *
 
     var p: Point = undefined;
     var pixel: Pixel = undefined;
-    var t: CoordinateType = 0;
+    var t: f64 = 0;
     while (t < length) : (t += 1) {
         p.x = p1.x + dx * t / length;
         p.y = p1.y + dy * t / length;

@@ -6,30 +6,18 @@ const Allocator = std.mem.Allocator;
 
 const Pixel = screen.Pixel;
 
-pub const CoordinateTransform = struct {
+pub const Transform = struct {
     const Self = @This();
 
-    translate_x: f64,
-    translate_y: f64,
-    scale: f64,
+    translation: Vec2 = Vec2{ .x = 0.0, .y = 0.0 },
+    scale: f64 = 1.0,
 
-    pub fn apply(self: *const Self, p: *const Point) Point {
-        return Point{
-            .x = self.scale * p.x + self.translate_x,
-            .y = self.scale * p.y + self.translate_y,
-        };
+    pub fn apply(self: *const Self, p: Point) Point {
+        return p.scale(self.scale).translate(self.translation);
     }
 
-    pub fn reverse(self: *const Self, p: *const Point) Point {
-        return Point{
-            .x = (p.x - self.translate_x) / self.scale,
-            .y = (p.y - self.translate_y) / self.scale,
-        };
-    }
-
-    pub fn applyInplace(self: *const Self, p: *Point) void {
-        p.x = self.scale * p.x + self.translate_x;
-        p.y = self.scale * p.y + self.translate_y;
+    pub fn reverse(self: *const Self, p: Point) Point {
+        return p.translate(self.translation.mul(-1)).scale(1.0 / self.scale);
     }
 };
 
@@ -38,31 +26,15 @@ pub const Point = struct {
     y: f64,
 
     pub fn subtract(self: *const Point, other: Point) Vec2 {
-        return Vec2{
-            .x = self.x - other.x,
-            .y = self.y - other.y,
-        };
+        return Vec2{ .x = self.x - other.x, .y = self.y - other.y };
     }
 
     pub fn translate(self: *const Point, displacement: Vec2) Point {
-        return Point{
-            .x = self.x + displacement.x,
-            .y = self.y + displacement.y,
-        };
+        return Point{ .x = self.x + displacement.x, .y = self.y + displacement.y };
     }
 
-    pub fn add(self: *const Point, p2: Point) Point {
-        return Point{
-            .x = self.x + p2.x,
-            .y = self.y + p2.y,
-        };
-    }
-
-    pub fn sub(self: *const Point, p2: Point) Point {
-        return Point{
-            .x = self.x - p2.x,
-            .y = self.y - p2.y,
-        };
+    pub fn scale(self: *const Point, factor: f64) Point {
+        return Point{ .x = self.x * factor, .y = self.y * factor };
     }
 };
 
@@ -71,6 +43,10 @@ pub const Vec2 = struct {
     x: f64,
     y: f64,
 
+    pub fn fromPoint(p: Point) Vec2 {
+        return .{ .x = p.x, .y = p.y };
+    }
+
     pub fn add(self: *const Vec2, other: Vec2) Vec2 {
         return Vec2{
             .x = self.x + other.x,
@@ -78,7 +54,7 @@ pub const Vec2 = struct {
         };
     }
 
-    pub fn subtract(self: *const Vec2, other: Vec2) Vec2 {
+    pub fn sub(self: *const Vec2, other: Vec2) Vec2 {
         return self.add(other.mul(-1));
     }
 
@@ -135,7 +111,7 @@ pub const Shape = union(enum) {
         }
     }
 
-    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+    pub fn transform(self: *Self, t: *const Transform) void {
         switch (self.*) {
             .polygon => self.polygon.transform(t),
             .rectangle => self.rectangle.transform(t),
@@ -202,12 +178,12 @@ pub const Polygon = struct {
         return sum;
     }
 
-    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
+    pub fn transform(self: *Self, t: *const Transform) void {
         if (self.n == 0) return;
-        t.applyInplace(&self.first.p);
+        self.first.p = t.apply(self.first.p);
         var current = self.first.next;
         while (current != self.first) : (current = current.next) {
-            t.applyInplace(&current.p);
+            current.p = t.apply(self.current.p);
         }
     }
 
@@ -247,9 +223,9 @@ pub const Rectangle = struct {
 
     const Self = @This();
 
-    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyInplace(&self.p1);
-        t.applyInplace(&self.p2);
+    pub fn transform(self: *Self, t: *const Transform) void {
+        self.p1 = t.apply(self.p1);
+        self.p2 = t.apply(self.p2);
     }
 
     pub fn draw(
@@ -284,8 +260,8 @@ pub const Circle = struct {
 
     const Self = @This();
 
-    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyInplace(&self.c);
+    pub fn transform(self: *Self, t: *const Transform) void {
+        self.c = t.apply(self.c);
         self.r = t.scale * self.r;
     }
 
@@ -326,9 +302,9 @@ pub const LineSegment = struct {
 
     const Self = @This();
 
-    pub fn transform(self: *Self, t: *const CoordinateTransform) void {
-        t.applyInplace(&self.p1);
-        t.applyInplace(&self.p2);
+    pub fn transform(self: *Self, t: *const Transform) void {
+        self.p1 = t.apply(self.p1);
+        self.p2 = t.apply(self.p2);
     }
 
     pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {

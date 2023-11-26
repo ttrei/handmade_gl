@@ -14,41 +14,32 @@ pub const Pixel = struct {
     }
 };
 
-// 2D pixel array, row-major
+/// 2D pixel array, row-major
 pub const PixelBuffer = struct {
     pixels: []u32,
-    // Dimensions of the subset
+    /// Dimensions of the subset
     width: u32,
     height: u32,
-    // How many pixels have to be skipped to go directly one row down
+    /// How many pixels have to be skipped to go directly one row down
     stride: u32,
-    const Self = @This();
 
-    // Initialize to the subset containing the whole array
-    pub fn init(pixels: []u32, width: u32, height: u32) !Self {
-        if (pixels.len != @as(u32, width) * height) {
-            return error.InvalidPixelBuffer;
-        }
-        return Self{
-            .pixels = pixels,
-            .width = width,
-            .height = height,
-            .stride = width,
-        };
+    /// Initialize to the subset containing the whole array
+    pub fn init(pixels: []u32, width: u32, height: u32) !PixelBuffer {
+        if (pixels.len != @as(u32, width) * height) return error.InvalidPixelBuffer;
+        return .{ .pixels = pixels, .width = width, .height = height, .stride = width };
     }
 
-    pub fn subBuffer(
-        self: *const Self,
-        width: u32,
-        height: u32,
-        origin: Pixel,
-    ) !Self {
-        if (width < 1 or height < 1) return error.InvalidPixelBuffer;
+    pub fn initEmpty() PixelBuffer {
+        return .{ .pixels = &.{}, .width = 0, .height = 0, .stride = 0 };
+    }
+
+    pub fn subBuffer(self: *const PixelBuffer, width: u32, height: u32, origin: Pixel) !PixelBuffer {
+        if (width == 0 or height == 0) return PixelBuffer.initEmpty();
         if (origin.x + @as(i32, @intCast(width)) > self.width or origin.y + @as(i32, @intCast(height)) > self.height) {
             return error.InvalidPixelBuffer;
         }
         const start = @as(u32, @intCast(origin.y)) * self.stride + @as(u32, @intCast(origin.x));
-        return Self{
+        return .{
             .pixels = self.pixels[start .. start + (height - 1) * self.stride + width],
             .width = width,
             .height = height,
@@ -56,7 +47,7 @@ pub const PixelBuffer = struct {
         };
     }
 
-    pub fn clear(self: *Self, color: u32) void {
+    pub fn clear(self: *PixelBuffer, color: u32) void {
         var y: u32 = 0;
         while (y < self.height) : (y += 1) {
             var x: u32 = 0;
@@ -66,14 +57,14 @@ pub const PixelBuffer = struct {
         }
     }
 
-    // Calculate index of a Pixel, given coordinates relative to the subbuffer origin
-    pub fn pixelIdx(self: *const Self, p: *const Pixel) ?u32 {
+    /// Calculate index of a Pixel, given coordinates relative to the subbuffer origin
+    pub fn pixelIdx(self: *const PixelBuffer, p: *const Pixel) ?u32 {
         if (p.x < 0 or p.y < 0) return null;
         if (p.x >= self.width or p.y >= self.height) return null;
         return @as(u32, @intCast(p.y)) * self.stride + @as(u32, @intCast(p.x));
     }
 
-    pub fn pixelValue(self: *const Self, p: *const Pixel) ?u32 {
+    pub fn pixelValue(self: *const PixelBuffer, p: *const Pixel) ?u32 {
         return self.pixels[self.pixelIdx(p) orelse return null];
     }
 };

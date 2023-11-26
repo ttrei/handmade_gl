@@ -9,12 +9,8 @@ pub const Pixel = struct {
     x: i32,
     y: i32,
 
-    pub fn fromPoint(p: *const Point) ?Pixel {
-        if (p.x < 0 or p.y < 0) return null;
-        return Pixel{
-            .x = @as(i32, @intFromFloat(p.x)),
-            .y = @as(i32, @intFromFloat(p.y)),
-        };
+    pub fn fromPoint(p: Point) Pixel {
+        return Pixel{ .x = @intFromFloat(p.x), .y = @intFromFloat(p.y) };
     }
 };
 

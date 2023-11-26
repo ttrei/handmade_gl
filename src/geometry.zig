@@ -7,16 +7,14 @@ const Allocator = std.mem.Allocator;
 const Pixel = screen.Pixel;
 
 pub const Transform = struct {
-    const Self = @This();
-
     translation: Vec2 = Vec2{ .x = 0.0, .y = 0.0 },
     scale: f64 = 1.0,
 
-    pub fn apply(self: *const Self, p: Point) Point {
+    pub fn apply(self: *const Transform, p: Point) Point {
         return p.scale(self.scale).translate(self.translation);
     }
 
-    pub fn reverse(self: *const Self, p: Point) Point {
+    pub fn reverse(self: *const Transform, p: Point) Point {
         return p.translate(self.translation.mul(-1)).scale(1.0 / self.scale);
     }
 };
@@ -25,16 +23,20 @@ pub const Point = struct {
     x: f64,
     y: f64,
 
+    pub fn fromPixel(p: Pixel) Point {
+        return .{ .x = @floatFromInt(p.x), .y = @floatFromInt(p.y) };
+    }
+
     pub fn subtract(self: *const Point, other: Point) Vec2 {
-        return Vec2{ .x = self.x - other.x, .y = self.y - other.y };
+        return .{ .x = self.x - other.x, .y = self.y - other.y };
     }
 
     pub fn translate(self: *const Point, displacement: Vec2) Point {
-        return Point{ .x = self.x + displacement.x, .y = self.y + displacement.y };
+        return .{ .x = self.x + displacement.x, .y = self.y + displacement.y };
     }
 
     pub fn scale(self: *const Point, factor: f64) Point {
-        return Point{ .x = self.x * factor, .y = self.y * factor };
+        return .{ .x = self.x * factor, .y = self.y * factor };
     }
 };
 
@@ -48,7 +50,7 @@ pub const Vec2 = struct {
     }
 
     pub fn add(self: *const Vec2, other: Vec2) Vec2 {
-        return Vec2{
+        return .{
             .x = self.x + other.x,
             .y = self.y + other.y,
         };
@@ -59,7 +61,7 @@ pub const Vec2 = struct {
     }
 
     pub fn mul(self: *const Vec2, multiplier: f64) Vec2 {
-        return Vec2{
+        return .{
             .x = self.x * multiplier,
             .y = self.y * multiplier,
         };
@@ -78,11 +80,11 @@ pub const Vec2 = struct {
     }
 
     pub fn invertX(self: *const Vec2) Vec2 {
-        return Vec2{ .x = -self.x, .y = self.y };
+        return .{ .x = -self.x, .y = self.y };
     }
 
     pub fn invertY(self: *const Vec2) Vec2 {
-        return Vec2{ .x = self.x, .y = -self.y };
+        return .{ .x = self.x, .y = -self.y };
     }
 
     pub fn angle(self: *const Vec2) f64 {
@@ -101,9 +103,7 @@ pub const Shape = union(enum) {
     rectangle: Rectangle,
     circle: Circle,
 
-    const Self = @This();
-
-    pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
+    pub fn draw(self: *const Shape, buffer: *PixelBuffer, color: u32) void {
         switch (self.*) {
             .polygon => self.polygon.draw(buffer, color),
             .rectangle => self.rectangle.draw(buffer, color),
@@ -111,7 +111,7 @@ pub const Shape = union(enum) {
         }
     }
 
-    pub fn transform(self: *Self, t: *const Transform) void {
+    pub fn transform(self: *Shape, t: *const Transform) void {
         switch (self.*) {
             .polygon => self.polygon.transform(t),
             .rectangle => self.rectangle.transform(t),
@@ -119,14 +119,14 @@ pub const Shape = union(enum) {
         }
     }
 
-    pub fn clone(self: *const Self, allocator: Allocator) !Self {
+    pub fn clone(self: *const Shape, allocator: Allocator) !Shape {
         return switch (self.*) {
             .polygon => .{ .polygon = try self.polygon.clone(allocator) },
             else => self.*,
         };
     }
 
-    pub fn deinit(self: *Self) void {
+    pub fn deinit(self: *Shape) void {
         switch (self.*) {
             .polygon => self.polygon.deinit(),
             else => {},
@@ -146,16 +146,14 @@ pub const Polygon = struct {
     first: *Vertex = undefined,
     n: usize = 0,
 
-    const Self = @This();
-
-    pub fn init(allocator: Allocator) Self {
-        return Self{ .arena = std.heap.ArenaAllocator.init(allocator) };
+    pub fn init(allocator: Allocator) Polygon {
+        return .{ .arena = std.heap.ArenaAllocator.init(allocator) };
     }
-    pub fn deinit(self: *Self) void {
+    pub fn deinit(self: *Polygon) void {
         self.arena.deinit();
     }
 
-    pub fn add_vertex(self: *Self, p: Point) !void {
+    pub fn add_vertex(self: *Polygon, p: Point) !void {
         const v = try self.arena.allocator().create(Vertex);
         if (self.n == 0) {
             v.* = .{ .p = p, .ear = false, .next = v, .prev = v };
@@ -168,7 +166,7 @@ pub const Polygon = struct {
         self.n += 1;
     }
 
-    pub fn area2(self: *const Self) i32 {
+    pub fn area2(self: *const Polygon) i32 {
         if (self.n < 3) return 0;
         var sum: i32 = 0;
         var a = self.first.next;
@@ -178,7 +176,7 @@ pub const Polygon = struct {
         return sum;
     }
 
-    pub fn transform(self: *Self, t: *const Transform) void {
+    pub fn transform(self: *Polygon, t: *const Transform) void {
         if (self.n == 0) return;
         self.first.p = t.apply(self.first.p);
         var current = self.first.next;
@@ -187,7 +185,7 @@ pub const Polygon = struct {
         }
     }
 
-    pub fn clone(self: *const Self, allocator: Allocator) !Polygon {
+    pub fn clone(self: *const Polygon, allocator: Allocator) !Polygon {
         var cloned = Polygon.init(allocator);
         if (self.n == 0) return cloned;
         try cloned.add_vertex(self.first.p);
@@ -198,11 +196,7 @@ pub const Polygon = struct {
         return cloned;
     }
 
-    pub fn draw(
-        self: *const Self,
-        buffer: *PixelBuffer,
-        color: u32,
-    ) void {
+    pub fn draw(self: *const Polygon, buffer: *PixelBuffer, color: u32) void {
         if (self.n == 0) return;
         var p1: Point = undefined;
         var p2: Point = undefined;
@@ -221,29 +215,21 @@ pub const Rectangle = struct {
     p1: Point,
     p2: Point,
 
-    const Self = @This();
-
-    pub fn transform(self: *Self, t: *const Transform) void {
+    pub fn transform(self: *Rectangle, t: *const Transform) void {
         self.p1 = t.apply(self.p1);
         self.p2 = t.apply(self.p2);
     }
 
-    pub fn draw(
-        self: *const Self,
-        buffer: *PixelBuffer,
-        color: u32,
-    ) void {
-        var pt1 = self.p1;
-        var pt2 = self.p2;
-        const left = @as(i32, @intFromFloat(@round(@min(pt1.x, pt2.x))));
-        const right = @as(i32, @intFromFloat(@round(@max(pt1.x, pt2.x))));
-        const top = @as(i32, @intFromFloat(@round(@min(pt1.y, pt2.y))));
-        const bottom = @as(i32, @intFromFloat(@round(@max(pt1.y, pt2.y))));
+    pub fn draw(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
+        const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
+        const right: i32 = @intFromFloat(@round(@max(self.p1.x, self.p2.x)));
+        const top: i32 = @intFromFloat(@round(@min(self.p1.y, self.p2.y)));
+        const bottom: i32 = @intFromFloat(@round(@max(self.p1.y, self.p2.y)));
         if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
-        const clamped_left: i32 = if (left < 0) 0 else left;
-        const clamped_top: i32 = if (top < 0) 0 else top;
-        const clamped_right: i32 = if (right > buffer.width) @as(i32, @intCast(buffer.width)) else right;
-        const clamped_bottom: i32 = if (bottom > buffer.height) @as(i32, @intCast(buffer.height)) else bottom;
+        const clamped_left = @max(left, 0);
+        const clamped_top = @max(top, 0);
+        const clamped_right = @min(right, @as(i32, @intCast(buffer.width)));
+        const clamped_bottom = @min(bottom, @as(i32, @intCast(buffer.height)));
         var p: Pixel = .{ .x = clamped_left, .y = clamped_top };
         while (p.y < clamped_bottom) : (p.y += 1) {
             p.x = clamped_left;
@@ -252,24 +238,34 @@ pub const Rectangle = struct {
             }
         }
     }
+
+    pub fn drawWireFrame(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
+        const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
+        const right: i32 = @intFromFloat(@round(@max(self.p1.x, self.p2.x)));
+        const top: i32 = @intFromFloat(@round(@min(self.p1.y, self.p2.y)));
+        const bottom: i32 = @intFromFloat(@round(@max(self.p1.y, self.p2.y)));
+        if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
+        var p = Pixel{ .x = left, .y = top };
+        while (p.y < bottom) : (p.y += 1) buffer.pixels[buffer.pixelIdx(&p) orelse continue] = color;
+        p = Pixel{ .x = right - 1, .y = top };
+        while (p.y < bottom) : (p.y += 1) buffer.pixels[buffer.pixelIdx(&p) orelse continue] = color;
+        p = Pixel{ .x = left, .y = top };
+        while (p.x < right) : (p.x += 1) buffer.pixels[buffer.pixelIdx(&p) orelse continue] = color;
+        p = Pixel{ .x = left, .y = bottom - 1 };
+        while (p.x < right) : (p.x += 1) buffer.pixels[buffer.pixelIdx(&p) orelse continue] = color;
+    }
 };
 
 pub const Circle = struct {
     c: Point,
     r: f64,
 
-    const Self = @This();
-
-    pub fn transform(self: *Self, t: *const Transform) void {
+    pub fn transform(self: *Circle, t: *const Transform) void {
         self.c = t.apply(self.c);
         self.r = t.scale * self.r;
     }
 
-    pub fn draw(
-        self: *const Self,
-        buffer: *PixelBuffer,
-        color: u32,
-    ) void {
+    pub fn draw(self: *const Circle, buffer: *PixelBuffer, color: u32) void {
         const c = self.c;
         const r = self.r;
         const width = @as(f64, @floatFromInt(buffer.width));
@@ -289,7 +285,7 @@ pub const Circle = struct {
             x = if (c.x - dx < 0) 0 else c.x - dx;
             const xmax = if (c.x + dx > width) width else c.x + dx;
             while (x < xmax) : (x += 1) {
-                pixel = Pixel.fromPoint(&.{ .x = x, .y = y }) orelse continue;
+                pixel = Pixel.fromPoint(.{ .x = x, .y = y });
                 buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
             }
         }
@@ -300,14 +296,12 @@ pub const LineSegment = struct {
     p1: Point,
     p2: Point,
 
-    const Self = @This();
-
-    pub fn transform(self: *Self, t: *const Transform) void {
+    pub fn transform(self: *LineSegment, t: *const Transform) void {
         self.p1 = t.apply(self.p1);
         self.p2 = t.apply(self.p2);
     }
 
-    pub fn draw(self: *const Self, buffer: *PixelBuffer, color: u32) void {
+    pub fn draw(self: *const LineSegment, buffer: *PixelBuffer, color: u32) void {
         drawLineSegment(buffer, color, &self.p1, &self.p2);
     }
 };
@@ -329,7 +323,7 @@ pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *
     while (t < length) : (t += 1) {
         p.x = p1.x + dx * t / length;
         p.y = p1.y + dy * t / length;
-        pixel = Pixel.fromPoint(&p) orelse continue;
+        pixel = Pixel.fromPoint(p);
         buffer.pixels[buffer.pixelIdx(&pixel) orelse continue] = color;
     }
 }

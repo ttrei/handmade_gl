@@ -181,7 +181,7 @@ pub const Polygon = struct {
         self.first.p = t.apply(self.first.p);
         var current = self.first.next;
         while (current != self.first) : (current = current.next) {
-            current.p = t.apply(self.current.p);
+            current.p = t.apply(current.p);
         }
     }
 

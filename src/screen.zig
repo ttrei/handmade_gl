@@ -70,22 +70,6 @@ pub const PixelBuffer = struct {
         }
     }
 
-    pub fn drawWireframe(self: *Self, color: u32) void {
-        var x: u32 = 0;
-        const last_row_start = self.stride * (self.height - 1);
-        while (x < self.width) : (x += 1) {
-            self.pixels[x] = color;
-            self.pixels[last_row_start + x] = color;
-        }
-        var y: u32 = 1;
-        var row_start: u32 = undefined;
-        while (y < self.height - 1) : (y += 1) {
-            row_start = y * self.stride;
-            self.pixels[row_start] = color;
-            self.pixels[row_start + self.width - 1] = color;
-        }
-    }
-
     // Calculate index of a Pixel, given coordinates relative to the subbuffer origin
     pub fn pixelIdx(self: *const Self, p: *const Pixel) ?u32 {
         if (p.x < 0 or p.y < 0) return null;

@@ -383,7 +383,7 @@ test "overlapping pixel buffers" {
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 2 }), red);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 1, .y = 3 }), black);
 
-    var buffer2 = try buffer.subBuffer(5, 5, .{ .x = 1, .y = 1 });
+    var buffer2 = buffer.subBuffer(.{ .x = 1, .y = 1 }, 5, 5);
     drawLineSegment(&buffer2, green, &.{ .x = -1, .y = -1 }, &.{ .x = 9, .y = 9 });
     try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 0, .y = 0 }), green);
     try std.testing.expectEqual(buffer2.pixelValue(&.{ .x = 1, .y = 1 }), green);

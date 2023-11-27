@@ -32,13 +32,13 @@ pub fn init(
         .width = width,
         .height = height,
         .transform = transform,
-        .buffer = Self.getSubBuffer(position, width, height, screen_buffer),
+        .buffer = screen_buffer.subBuffer(position, width, height),
         .screen_buffer = screen_buffer,
     };
 }
 
 pub fn updateBuffer(self: *Self) void {
-    self.buffer = Self.getSubBuffer(self.position, self.width, self.height, self.screen_buffer);
+    self.buffer = self.screen_buffer.subBuffer(self.position, self.width, self.height);
 }
 
 pub fn screenToWorldCoordinates(self: *const Self, screen_coords: Pixel) Point {
@@ -46,19 +46,4 @@ pub fn screenToWorldCoordinates(self: *const Self, screen_coords: Pixel) Point {
         .x = @floatFromInt(screen_coords.x - self.position.x),
         .y = @floatFromInt(screen_coords.y - self.position.y),
     });
-}
-
-fn getSubBuffer(position: Pixel, width: u32, height: u32, screen_buffer: *const PixelBuffer) PixelBuffer {
-    const left = @max(position.x, 0);
-    const top = @max(position.y, 0);
-    const right = @min(position.x + @as(i32, @intCast(width)), @as(i32, @intCast(screen_buffer.width)));
-    const bottom = @min(position.y + @as(i32, @intCast(height)), @as(i32, @intCast(screen_buffer.height)));
-    if (left >= screen_buffer.width or top >= screen_buffer.height or right < 0 or bottom < 0) {
-        return PixelBuffer.initEmpty();
-    }
-    return screen_buffer.subBuffer(
-        @intCast(right - left),
-        @intCast(bottom - top),
-        .{ .x = left, .y = top },
-    ) catch unreachable;
 }

@@ -15,7 +15,7 @@ width: u32,
 height: u32,
 /// Transforms from world coordinates to camera coordinates
 transform: Transform,
-/// Pixel sub-buffer representing the on-screen part of the camera view.
+/// Pixel buffer representing the camera view.
 buffer: PixelBuffer,
 /// The screen buffer backing the sub-buffer.
 screen_buffer: *const PixelBuffer,
@@ -46,4 +46,12 @@ pub fn screenToWorldCoordinates(self: *const Self, screen_coords: Pixel) Point {
         .x = @floatFromInt(screen_coords.x - self.position.x),
         .y = @floatFromInt(screen_coords.y - self.position.y),
     });
+}
+
+pub fn drawOutline(self: *Self, color: u32) void {
+    const rect = geometry.Rectangle{
+        .p1 = .{ .x = 0, .y = 0 },
+        .p2 = .{ .x = @floatFromInt(self.width), .y = @floatFromInt(self.height) },
+    };
+    rect.drawOutline(&self.buffer, color);
 }

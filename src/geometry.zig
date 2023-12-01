@@ -239,7 +239,7 @@ pub const Rectangle = struct {
         }
     }
 
-    pub fn drawWireFrame(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
+    pub fn drawOutline(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
         const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
         const right: i32 = @intFromFloat(@round(@max(self.p1.x, self.p2.x)));
         const top: i32 = @intFromFloat(@round(@min(self.p1.y, self.p2.y)));

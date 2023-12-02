@@ -62,7 +62,6 @@ pub const PixelBuffer = struct {
         const top = @max(origin.y, 0);
         const right = @min(origin.x + iwidth, iwidth_parent) - 1;
         const bottom = @min(origin.y + iheight, iheight_parent) - 1;
-        std.debug.print("left={}, top={}\n", .{ left, top });
         if (left >= self.width or top >= self.height or right < 0 or bottom < 0) return PixelBuffer.initEmpty();
         const start: u32 = @intCast(top * @as(i32, @intCast(self.stride)) + left);
         const end: u32 = @intCast(bottom * @as(i32, @intCast(self.stride)) + right);

@@ -35,7 +35,7 @@ pub const PixelBuffer = struct {
             .width = width,
             .height = height,
             .visible_topleft = .{ .x = 0, .y = 0 },
-            .visible_bottomright = .{ .x = @intCast(width - 1), .y = @intCast(height - 1) },
+            .visible_bottomright = .{ .x = @intCast(width), .y = @intCast(height) },
             .stride = width,
         };
     }
@@ -72,8 +72,8 @@ pub const PixelBuffer = struct {
             .height = height,
             .visible_topleft = .{ .x = @max(-origin.x, 0), .y = @max(-origin.y, 0) },
             .visible_bottomright = .{
-                .x = @min(iwidth, iwidth_parent - origin.x) - 1,
-                .y = @min(iheight, iheight_parent - origin.y) - 1,
+                .x = @min(iwidth, iwidth_parent - origin.x),
+                .y = @min(iheight, iheight_parent - origin.y),
             },
             .stride = self.stride,
         };
@@ -92,7 +92,7 @@ pub const PixelBuffer = struct {
     /// Calculate index of a Pixel in the subbuffer coordinate system
     pub fn pixelIdx(self: *const PixelBuffer, p: *const Pixel) ?u32 {
         if (p.x < self.visible_topleft.x or p.y < self.visible_topleft.y) return null;
-        if (p.x > self.visible_bottomright.x or p.y > self.visible_bottomright.y) return null;
+        if (p.x >= self.visible_bottomright.x or p.y >= self.visible_bottomright.y) return null;
         return @as(u32, @intCast(p.y - self.visible_topleft.y)) * self.stride + @as(u32, @intCast(p.x - self.visible_topleft.x));
     }
 

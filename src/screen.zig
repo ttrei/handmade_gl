@@ -80,11 +80,11 @@ pub const PixelBuffer = struct {
     }
 
     pub fn clear(self: *PixelBuffer, color: u32) void {
-        var p = Pixel{ .x = 0, .y = 0 };
-        while (p.y < self.height) : (p.y += 1) {
-            p.x = 0;
-            while (p.x < self.width) : (p.x += 1) {
-                self.pixels[self.pixelIdx(&p) orelse continue] = color;
+        var p = self.visible_topleft;
+        while (p.y < self.visible_bottomright.y) : (p.y += 1) {
+            p.x = self.visible_topleft.x;
+            while (p.x < self.visible_bottomright.x) : (p.x += 1) {
+                self.pixels[self.pixelIdx(&p) orelse unreachable] = color;
             }
         }
     }

@@ -40,19 +40,8 @@ pub const PixelBuffer = struct {
         };
     }
 
-    pub fn initEmpty() PixelBuffer {
-        return .{
-            .pixels = &.{},
-            .width = 0,
-            .height = 0,
-            .visible_topleft = .{ .x = 0, .y = 0 },
-            .visible_bottomright = .{ .x = 0, .y = 0 },
-            .stride = 0,
-        };
-    }
-
-    pub fn subBuffer(self: *const PixelBuffer, origin: Pixel, width: u32, height: u32) PixelBuffer {
-        if (width == 0 or height == 0) return PixelBuffer.initEmpty();
+    pub fn subBuffer(self: *const PixelBuffer, origin: Pixel, width: u32, height: u32) ?PixelBuffer {
+        if (width == 0 or height == 0) return null;
         const iwidth: i32 = @intCast(width);
         const iheight: i32 = @intCast(height);
         const iwidth_parent: i32 = @intCast(self.width);
@@ -62,7 +51,7 @@ pub const PixelBuffer = struct {
         const top = @max(origin.y, 0);
         const right = @min(origin.x + iwidth, iwidth_parent) - 1;
         const bottom = @min(origin.y + iheight, iheight_parent) - 1;
-        if (left >= self.width or top >= self.height or right < 0 or bottom < 0) return PixelBuffer.initEmpty();
+        if (left >= self.width or top >= self.height or right < 0 or bottom < 0) return null;
         const start: u32 = @intCast(top * @as(i32, @intCast(self.stride)) + left);
         const end: u32 = @intCast(bottom * @as(i32, @intCast(self.stride)) + right);
         return PixelBuffer{
@@ -114,8 +103,8 @@ test "buffer" {
 
     try std.testing.expectEqual(buffer.pixels.len, 10 * 15);
 
-    var buffer2 = buffer.subBuffer(.{ .x = 0, .y = 0 }, 10, 15);
-    var buffer3 = buffer.subBuffer(.{ .x = 1, .y = 1 }, 8, 13);
+    var buffer2 = buffer.subBuffer(.{ .x = 0, .y = 0 }, 10, 15) orelse unreachable;
+    var buffer3 = buffer.subBuffer(.{ .x = 1, .y = 1 }, 8, 13) orelse unreachable;
     try std.testing.expectEqualSlices(u32, buffer.pixels, buffer2.pixels);
 
     const white = 0xFFFFFFFF;
@@ -137,7 +126,7 @@ test "buffer" {
 
     try std.testing.expectEqualSlices(u32, buffer.pixels, buffer2.pixels);
 
-    const buffer4 = buffer2.subBuffer(.{ .x = 1, .y = 1 }, 8, 13);
+    const buffer4 = buffer2.subBuffer(.{ .x = 1, .y = 1 }, 8, 13) orelse unreachable;
     try std.testing.expectEqualSlices(u32, buffer3.pixels, buffer4.pixels);
 }
 
@@ -150,29 +139,23 @@ test "subbuffer" {
     var buffer = try PixelBuffer.init(pixels, 10, 15);
 
     buffer.clear(white);
-    var buffer2 = buffer.subBuffer(.{ .x = -100, .y = -100 }, 20, 20);
-    try std.testing.expectEqual(buffer2.pixels.len, 0);
-    buffer2.clear(black);
-    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
-    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 9, .y = 14 }), white);
+    const buffer2 = buffer.subBuffer(.{ .x = -100, .y = -100 }, 20, 20);
+    try std.testing.expectEqual(buffer2, null);
 
-    buffer2 = buffer.subBuffer(.{ .x = -100, .y = -100 }, 150, 150);
-    try std.testing.expectEqual(buffer2.pixels.len, buffer.pixels.len);
-    buffer2.clear(black);
+    var buffer3 = buffer.subBuffer(.{ .x = -100, .y = -100 }, 150, 150) orelse unreachable;
+    try std.testing.expectEqual(buffer3.pixels.len, buffer.pixels.len);
+    buffer3.clear(black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 9, .y = 14 }), black);
 
     buffer.clear(white);
-    buffer2 = buffer.subBuffer(.{ .x = 5, .y = 5 }, 20, 20);
-    try std.testing.expect(buffer2.pixels.len < buffer.pixels.len);
-    buffer2.clear(black);
+    var buffer4 = buffer.subBuffer(.{ .x = 5, .y = 5 }, 20, 20) orelse unreachable;
+    try std.testing.expect(buffer4.pixels.len < buffer.pixels.len);
+    buffer4.clear(black);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
     try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 9, .y = 14 }), black);
 
     buffer.clear(white);
-    buffer2 = buffer.subBuffer(.{ .x = 100, .y = 100 }, 20, 20);
-    try std.testing.expectEqual(buffer2.pixels.len, 0);
-    buffer2.clear(black);
-    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 0, .y = 0 }), white);
-    try std.testing.expectEqual(buffer.pixelValue(&.{ .x = 9, .y = 14 }), white);
+    const buffer5 = buffer.subBuffer(.{ .x = 100, .y = 100 }, 20, 20);
+    try std.testing.expectEqual(buffer5, null);
 }

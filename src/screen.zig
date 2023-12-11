@@ -77,16 +77,16 @@ pub const PixelBuffer = struct {
             return;
         }
         var row_start_pixel_idx = self.pixelIdx(&self.visible_topleft) orelse unreachable;
-        var idx: u32 = undefined;
+        var idx = row_start_pixel_idx;
         var y = self.visible_topleft.y;
         var x = self.visible_topleft.x;
         while (y < self.visible_bottomright.y) : (y += 1) {
-            idx = row_start_pixel_idx;
             while (x < self.visible_bottomright.x) : (x += 1) {
                 self.pixels[idx] = color;
                 idx += 1;
             }
             row_start_pixel_idx += self.stride;
+            idx = row_start_pixel_idx;
             x = self.visible_topleft.x;
         }
     }

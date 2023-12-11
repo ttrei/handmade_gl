@@ -72,8 +72,7 @@ pub const PixelBuffer = struct {
 
     pub fn clear(self: *PixelBuffer, color: u32) void {
         if (!self.is_subbuffer) {
-            var i: usize = 0;
-            while (i < self.pixels.len) : (i += 1) self.pixels[i] = color;
+            for (self.pixels) |*pixel| pixel.* = color;
             return;
         }
         var row_start_pixel_idx = self.pixelIdx(&self.visible_topleft) orelse unreachable;

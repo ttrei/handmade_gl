@@ -16,6 +16,7 @@ pub const Pixel = struct {
 
 /// 2D pixel array, row-major
 pub const PixelBuffer = struct {
+    is_subbuffer: bool = false,
     pixels: []u32,
     /// Position of the subbuffer origin in the parent buffer coordinate system (can be outside of the parent buffer)
     origin: Pixel = .{ .x = 0, .y = 0 },
@@ -55,6 +56,7 @@ pub const PixelBuffer = struct {
         const start: u32 = @intCast(top * @as(i32, @intCast(self.stride)) + left);
         const end: u32 = @intCast(bottom * @as(i32, @intCast(self.stride)) + right);
         return PixelBuffer{
+            .is_subbuffer = true,
             .pixels = self.pixels[start .. end + 1],
             .origin = origin,
             .width = width,
@@ -69,6 +71,11 @@ pub const PixelBuffer = struct {
     }
 
     pub fn clear(self: *PixelBuffer, color: u32) void {
+        if (!self.is_subbuffer) {
+            var i: usize = 0;
+            while (i < self.pixels.len) : (i += 1) self.pixels[i] = color;
+            return;
+        }
         var row_start_pixel_idx = self.pixelIdx(&self.visible_topleft) orelse unreachable;
         var idx: u32 = undefined;
         var y = self.visible_topleft.y;

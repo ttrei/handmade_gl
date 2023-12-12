@@ -220,28 +220,33 @@ pub const Rectangle = struct {
         self.p2 = t.apply(self.p2);
     }
 
+    /// Draw the rectangle onto a PixelBuffer.
+    /// The rectangle is interpreted relative to the buffer coordinate system.
     pub fn draw(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
+        // Don't try to draw if the buffer itself is invisible.
+        if (!buffer.visible()) return;
+        // Rectangle limits.
         const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
         const right: i32 = @intFromFloat(@round(@max(self.p1.x, self.p2.x)));
         const top: i32 = @intFromFloat(@round(@min(self.p1.y, self.p2.y)));
         const bottom: i32 = @intFromFloat(@round(@max(self.p1.y, self.p2.y)));
-        if (left >= buffer.width or right <= 0 or top >= buffer.height or bottom <= 0) return;
-        const clamped_left = @max(left, buffer.visible_topleft.x, 0);
-        const clamped_top = @max(top, buffer.visible_topleft.y, 0);
-        const clamped_right = @min(right, buffer.visible_bottomright.x, @as(i32, @intCast(buffer.width)));
-        const clamped_bottom = @min(bottom, buffer.visible_bottomright.y, @as(i32, @intCast(buffer.height)));
-        var row_start_pixel_idx = buffer.pixelIdx(&.{ .x = clamped_left, .y = clamped_top }) orelse unreachable;
+        const visible_left = @max(left, buffer.visible_topleft.x, 0);
+        const visible_top = @max(top, buffer.visible_topleft.y, 0);
+        const visible_right = @min(right, buffer.visible_bottomright.x, @as(i32, @intCast(buffer.width)));
+        const visible_bottom = @min(bottom, buffer.visible_bottomright.y, @as(i32, @intCast(buffer.height)));
+        if (visible_left >= visible_right or visible_top >= visible_bottom) return;
+        var row_start_pixel_idx = buffer.pixelIdx(&.{ .x = visible_left, .y = visible_top }) orelse unreachable;
         var idx = row_start_pixel_idx;
-        var x = clamped_left;
-        var y = clamped_top;
-        while (y < clamped_bottom) : (y += 1) {
-            while (x < clamped_right) : (x += 1) {
+        var x = visible_left;
+        var y = visible_top;
+        while (y < visible_bottom) : (y += 1) {
+            while (x < visible_right) : (x += 1) {
                 buffer.pixels[idx] = color;
                 idx += 1;
             }
             row_start_pixel_idx += buffer.stride;
             idx = row_start_pixel_idx;
-            x = clamped_left;
+            x = visible_left;
         }
     }
 

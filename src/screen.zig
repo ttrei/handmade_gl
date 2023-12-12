@@ -100,6 +100,10 @@ pub const PixelBuffer = struct {
     pub fn pixelValue(self: *const PixelBuffer, p: *const Pixel) ?u32 {
         return self.pixels[self.pixelIdx(p) orelse return null];
     }
+
+    pub fn visible(self: *const PixelBuffer) bool {
+        return self.visible_topleft.x < self.visible_bottomright.x and self.visible_topleft.y < self.visible_bottomright.y;
+    }
 };
 
 test "buffer" {

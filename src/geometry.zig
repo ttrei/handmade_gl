@@ -104,6 +104,7 @@ pub const Shape = union(enum) {
     circle: Circle,
 
     pub fn draw(self: *const Shape, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
         switch (self.*) {
             .polygon => self.polygon.draw(buffer, color),
             .rectangle => self.rectangle.draw(buffer, color),
@@ -196,7 +197,9 @@ pub const Polygon = struct {
         return cloned;
     }
 
+    /// Draw to a PixelBuffer relative to the buffer coordinate system.
     pub fn draw(self: *const Polygon, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
         if (self.n == 0) return;
         var p1: Point = undefined;
         var p2: Point = undefined;
@@ -220,10 +223,8 @@ pub const Rectangle = struct {
         self.p2 = t.apply(self.p2);
     }
 
-    /// Draw the rectangle onto a PixelBuffer.
-    /// The rectangle is interpreted relative to the buffer coordinate system.
+    /// Draw to a PixelBuffer relative to the buffer coordinate system.
     pub fn draw(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
-        // Don't try to draw if the buffer itself is invisible.
         if (!buffer.visible()) return;
         // Rectangle limits.
         const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
@@ -251,6 +252,7 @@ pub const Rectangle = struct {
     }
 
     pub fn drawOutline(self: *const Rectangle, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
         const left: i32 = @intFromFloat(@round(@min(self.p1.x, self.p2.x)));
         const right: i32 = @intFromFloat(@round(@max(self.p1.x, self.p2.x)));
         const top: i32 = @intFromFloat(@round(@min(self.p1.y, self.p2.y)));
@@ -276,7 +278,9 @@ pub const Circle = struct {
         self.r = t.scale * self.r;
     }
 
+    /// Draw to a PixelBuffer relative to the buffer coordinate system.
     pub fn draw(self: *const Circle, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
         const c = self.c;
         const r = self.r;
         const width = @as(f64, @floatFromInt(buffer.width));
@@ -312,7 +316,9 @@ pub const LineSegment = struct {
         self.p2 = t.apply(self.p2);
     }
 
+    /// Draw to a PixelBuffer relative to the buffer coordinate system.
     pub fn draw(self: *const LineSegment, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
         drawLineSegment(buffer, color, &self.p1, &self.p2);
     }
 };
@@ -321,9 +327,11 @@ pub fn orientedArea2(a: *const Point, b: *const Point, c: *const Point) i32 {
     return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
 }
 
+/// Draw to a PixelBuffer relative to the buffer coordinate system.
 pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *const Point) void {
-    // Non-optimal implementation - invisible segments are not culled.
+    if (!buffer.visible()) return;
 
+    // TODO: Non-optimal implementation - invisible segments are not culled.
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const length = @sqrt(dx * dx + dy * dy);
@@ -331,6 +339,8 @@ pub fn drawLineSegment(buffer: *PixelBuffer, color: u32, p1: *const Point, p2: *
     var p: Point = undefined;
     var pixel: Pixel = undefined;
     var t: f64 = 0;
+    // TODO: Optimization possible. We can do without calling pixelIdx() on each iteration.
+    //       https://github.com/ssloy/tinyrenderer/wiki/Lesson-1:-Bresenham%E2%80%99s-Line-Drawing-Algorithm
     while (t < length) : (t += 1) {
         p.x = p1.x + dx * t / length;
         p.y = p1.y + dy * t / length;

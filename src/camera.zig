@@ -56,3 +56,14 @@ pub fn drawOutline(self: *Self, color: u32) void {
     };
     rect.drawOutline(&self.buffer.?, color);
 }
+
+pub fn contains(self: *const Self, pixel: Pixel) bool {
+    const right = self.position.x + @as(i32, @intCast(self.width));
+    const bottom = self.position.y + @as(i32, @intCast(self.height));
+    // These boundary comparisons return false when the pixel lies outside the outline.
+    // My initial guess was to place the equality check on the right and bottom sides.
+    // Maybe I'm not interpreting correctly which pixel the cursor is pointing at.
+    if (pixel.x <= self.position.x or pixel.x > right) return false;
+    if (pixel.y <= self.position.y or pixel.y > bottom) return false;
+    return true;
+}

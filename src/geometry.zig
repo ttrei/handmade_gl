@@ -11,11 +11,11 @@ pub const Transform = struct {
     scale: f64 = 1.0,
 
     pub fn apply(self: *const Transform, p: Point) Point {
-        return p.scale(self.scale).translate(self.translation);
+        return p.translate(self.translation).scale(self.scale);
     }
 
     pub fn reverse(self: *const Transform, p: Point) Point {
-        return p.translate(self.translation.mul(-1)).scale(1.0 / self.scale);
+        return p.scale(1.0 / self.scale).translate(self.translation.mul(-1));
     }
 };
 

@@ -102,6 +102,7 @@ pub const Shape = union(enum) {
     polygon: Polygon,
     rectangle: Rectangle,
     circle: Circle,
+    line_segment: LineSegment,
 
     pub fn draw(self: *const Shape, buffer: *PixelBuffer, color: u32) void {
         if (!buffer.visible()) return;
@@ -109,6 +110,7 @@ pub const Shape = union(enum) {
             .polygon => self.polygon.draw(buffer, color),
             .rectangle => self.rectangle.draw(buffer, color),
             .circle => self.circle.draw(buffer, color),
+            .line_segment => self.line_segment.draw(buffer, color),
         }
     }
 
@@ -117,6 +119,7 @@ pub const Shape = union(enum) {
             .polygon => self.polygon.transform(t),
             .rectangle => self.rectangle.transform(t),
             .circle => self.circle.transform(t),
+            .line_segment => self.line_segment.transform(t),
         }
     }
 

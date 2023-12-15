@@ -1,6 +1,7 @@
 const geometry = @import("geometry.zig");
 const Transform = geometry.Transform;
 const Point = geometry.Point;
+const Shape = geometry.Shape;
 
 const screen = @import("screen.zig");
 const Pixel = screen.Pixel;
@@ -46,6 +47,12 @@ pub fn screenToWorldCoordinates(self: *const Self, screen_coords: Pixel) Point {
         .x = @floatFromInt(screen_coords.x - self.position.x),
         .y = @floatFromInt(screen_coords.y - self.position.y),
     });
+}
+
+pub fn draw(self: *Self, shape: *Shape, color: u32) void {
+    if (self.buffer == null) return;
+    shape.transform(&self.transform);
+    shape.draw(&self.buffer.?, color);
 }
 
 pub fn drawOutline(self: *Self, color: u32) void {

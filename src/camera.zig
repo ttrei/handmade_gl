@@ -9,17 +9,21 @@ const PixelBuffer = screen.PixelBuffer;
 
 const Self = @This();
 
-/// Position of the camera (in pixels)
+/// Position of the camera in screen_buffer (in pixels).
 position: Pixel,
-/// Size of the camera (in pixels)
+/// Size of the camera (in pixels).
 width: u32,
 height: u32,
-/// Transforms from world coordinates to camera coordinates
+/// Transforms the shape to be drawn from world coordinates to camera coordinates.
 transform: Transform,
 /// Pixel buffer representing the camera view.
 buffer: ?PixelBuffer,
 /// The screen buffer backing the sub-buffer.
 screen_buffer: *const PixelBuffer,
+/// Whether camera origin should be drawn at the center of the buffer (top-left by default).
+mode: Mode,
+
+pub const Mode = enum { topleft, centered };
 
 pub fn init(
     position: Pixel,
@@ -27,6 +31,7 @@ pub fn init(
     height: u32,
     transform: Transform,
     screen_buffer: *const PixelBuffer,
+    mode: Mode,
 ) !Self {
     return .{
         .position = position,
@@ -35,6 +40,7 @@ pub fn init(
         .transform = transform,
         .buffer = screen_buffer.subBuffer(position, width, height),
         .screen_buffer = screen_buffer,
+        .mode = mode,
     };
 }
 
@@ -52,6 +58,12 @@ pub fn screenToWorldCoordinates(self: *const Self, screen_coords: Pixel) Point {
 pub fn draw(self: *Self, shape: *Shape, color: u32) void {
     if (self.buffer == null) return;
     shape.transform(&self.transform);
+    if (self.mode == Mode.centered) {
+        shape.transform(&.{ .translation = .{
+            .x = @as(f64, @floatFromInt(self.width)) / 2,
+            .y = @as(f64, @floatFromInt(self.height)) / 2,
+        } });
+    }
     shape.draw(&self.buffer.?, color);
 }
 

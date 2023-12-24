@@ -38,6 +38,13 @@ pub const Point = struct {
     pub fn scale(self: *const Point, factor: f64) Point {
         return .{ .x = self.x * factor, .y = self.y * factor };
     }
+
+    /// Draw to a PixelBuffer relative to the buffer coordinate system.
+    pub fn draw(self: *const Point, buffer: *PixelBuffer, color: u32) void {
+        if (!buffer.visible()) return;
+        const pixel = Pixel.fromPoint(self.*);
+        buffer.pixels[buffer.pixelIdx(&pixel).?] = color;
+    }
 };
 
 /// Free vector (we care only about its magnitude and direction)

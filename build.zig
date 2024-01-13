@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("handmade_gl", .{
-        .source_file = .{ .path = "src/gl.zig" },
+        .root_source_file = .{ .path = "src/gl.zig" },
     });
 
     // Creates a step for unit testing. This only builds the test executable

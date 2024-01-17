@@ -95,7 +95,7 @@ pub const Vec2 = struct {
     }
 
     pub fn angle(self: *const Vec2) f64 {
-        return std.math.atan2(f64, self.y, self.x);
+        return std.math.atan2(self.y, self.x);
     }
 };
 

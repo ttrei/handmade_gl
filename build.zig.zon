@@ -1,0 +1,6 @@
+.{
+    .name = .handmade_gl,
+    .version = "0.0.0",
+    .fingerprint = 0x3f6ec35034fe5e7c,
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}
